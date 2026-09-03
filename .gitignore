@@ -1,0 +1,12 @@
+node_modules/
+.next/
+out/
+coverage/
+tsconfig.tsbuildinfo
+.DS_Store
+
+# Local-only configuration, logs and exported text snapshots
+.env*
+!.env.example
+*.log
+/花少人格鉴定-题目与选项-*.txt
