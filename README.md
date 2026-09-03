@@ -2,6 +2,8 @@
 
 这是《花少人格鉴定》的 Next.js + TypeScript 网站，当前内容版本为 `Question Set v3.0 Final Candidate`，人格坐标为 `Archetype Profiles v2.0`，计分版本为 `Calibrated Item-Profile Matching v3.0`。
 
+项目的调研资料、人物模型推导、题库演进、评分决策和待核验事项见 [`docs/README.md`](docs/README.md)。`data/` 与 `lib/` 是当前实现真相源，历史方案仅用于解释决策。
+
 ## 一句话说明
 
 一个把现实生活中的人际选择题，包装成“旅行真人秀考古档案”的娱乐测试：24 题、6 个维度、7 种花学人格原型，最后生成一份可以截图分享的个人档案。
@@ -23,11 +25,13 @@ data/
 lib/
   scoring.ts          六维分数、校准匹配、证据生成
   scoring.test.ts     推荐的最小单元测试
+docs/
+  README.md           调研、人物模型、设计决策与历史边界索引
 ```
 
 ## 推荐启动方式
 
-这不是一个绑定框架的完整网站仓库，而是一组可直接放入 React、Vue、Svelte 或其他 TypeScript 前端项目的内容与算法输入。接入时：
+这是一个 Next.js 完整网站仓库，也提供了一组可复用的内容与算法输入。接入其他 React、Vue、Svelte 或 TypeScript 前端时：
 
 1. 将 `data/` 和 `lib/` 复制到前端项目；
 2. 用 `QUESTIONS` 渲染单题流程；
