@@ -15,7 +15,8 @@ import type { AnswerMap, ComputedResult } from "../types";
 
 type Screen = "home" | "quiz" | "act" | "loading" | "reveal" | "result";
 
-const STORAGE_KEY = `flower-studies-archive-session-v${QUESTION_SET_VERSION}`;
+const STORAGE_KEY = `huaxue-test-session-v${QUESTION_SET_VERSION}`;
+const LEGACY_STORAGE_KEY = `flower-studies-archive-session-v${QUESTION_SET_VERSION}`;
 const LOADING_LINES = [
   "正在整理你的 24 个选择……",
   "正在比较你在不同场合的反应……",
@@ -76,7 +77,9 @@ function readSession(): {
   screen: Screen;
 } | null {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw =
+      window.localStorage.getItem(STORAGE_KEY) ??
+      window.localStorage.getItem(LEGACY_STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     const answers = sanitizeAnswers(parsed.answers);
@@ -143,10 +146,10 @@ function createShareCardSvg(
     <rect width="900" height="1200" fill="#f3efe6"/>
     <path d="M48 48H852M48 1152H852" stroke="#b64c3e" stroke-width="2" opacity=".55"/>
     <path d="M48 138H852" stroke="#1d211d" stroke-width="1" opacity=".22"/>
-    <text x="60" y="88" fill="#1d211d" font-family="monospace" font-size="16" letter-spacing="3">FLOWER STUDIES ARCHIVE</text>
+    <text x="60" y="88" fill="#1d211d" font-family="monospace" font-size="16" letter-spacing="3">花学测试 / FLOWER STUDIES</text>
     <text x="840" y="88" fill="#6f7069" font-family="monospace" font-size="15" text-anchor="end">CASE #002</text>
-    <text x="60" y="235" fill="#b64c3e" font-family="serif" font-size="28" letter-spacing="10">花 少 人 格</text>
-    <text x="60" y="295" fill="#1d211d" font-family="serif" font-size="62" font-weight="700" letter-spacing="8">鉴 定</text>
+    <text x="60" y="235" fill="#b64c3e" font-family="serif" font-size="28" letter-spacing="10">花 学</text>
+    <text x="60" y="295" fill="#1d211d" font-family="serif" font-size="62" font-weight="700" letter-spacing="8">测 试</text>
     <text x="60" y="360" fill="#b64c3e" font-family="monospace" font-size="17" letter-spacing="4">${escapeXml(archetype.englishName)}</text>
     <text x="60" y="455" fill="#1d211d" font-family="serif" font-size="78" font-weight="700">${escapeXml(archetype.personName)}</text>
     <text x="60" y="500" fill="#4c7180" font-family="serif" font-size="30" font-weight="700">${escapeXml(archetype.title)}</text>
@@ -157,7 +160,7 @@ function createShareCardSvg(
     <circle cx="750" cy="1035" r="61" fill="none" stroke="#b64c3e" stroke-width="2"/>
     <text x="750" y="1028" fill="#b64c3e" font-family="monospace" font-size="15" text-anchor="middle">HEART-EYE</text>
     <text x="750" y="1052" fill="#b64c3e" font-family="serif" font-size="22" text-anchor="middle">${escapeXml(content.keywords[0])}</text>
-    <text x="60" y="1110" fill="#6f7069" font-family="monospace" font-size="14">纯娱乐原型 · 3:4 ARCHIVE CARD</text>
+    <text x="60" y="1110" fill="#6f7069" font-family="monospace" font-size="14">纯娱乐原型 · 3:4 HUAXUE TEST CARD</text>
   </svg>`;
 }
 
@@ -249,6 +252,7 @@ export default function Home() {
     if (transitionTimer.current) clearTimeout(transitionTimer.current);
     try {
       window.localStorage.removeItem(STORAGE_KEY);
+      window.localStorage.removeItem(LEGACY_STORAGE_KEY);
     } catch {
       // Private browsing and storage quotas should not interrupt a fresh run.
     }
@@ -325,7 +329,7 @@ export default function Home() {
       <header className="archive-header">
         <div className="archive-brand">
           <span className="brand-mark">✳</span>
-          <span>花少 · TRAVEL GROUP STUDY</span>
+          <span>花学测试 · TRAVEL GROUP</span>
         </div>
         <div className="header-case">S02 / {screen === "home" ? "OPEN" : "REC"}</div>
       </header>
@@ -395,15 +399,15 @@ function HomeScreen({
   return (
     <section className="home-screen page-enter" aria-labelledby="home-title">
       <div className="home-copy">
-        <p className="eyebrow"><span className="red-dot" /> FIELD NOTE / FSA-002</p>
+        <p className="eyebrow"><span className="red-dot" /> FIELD NOTE / HXT-002</p>
         <h1 id="home-title" className="home-title">
-          花 少<br /><em>人 格 鉴 定</em>
+          花 学<br /><em>测 试</em>
         </h1>
         <p className="home-question">你到底是《花少2》里的谁？</p>
         <p className="home-subtitle">{subtitle}</p>
         <div className="home-actions">
           <button className="primary-action" type="button" onClick={onStart}>
-            <span>开始鉴定</span><span className="action-arrow">↗</span>
+            <span>开始测试</span><span className="action-arrow">↗</span>
           </button>
         </div>
         {hasSavedProgress && (
@@ -540,9 +544,9 @@ function LoadingScreen({ line, onSkip }: { line: string; onSkip: () => void }) {
     <section className="loading-screen page-enter" aria-live="polite" aria-busy="true">
       <div className="loading-record"><span className="record-dot" /> ANALYSIS REC / CASE #002</div>
       <div className="scanner" aria-hidden="true"><span /><span /><span /></div>
-      <p className="loading-kicker">ARCHIVE PROCESSING</p>
+      <p className="loading-kicker">HUAXUE TEST PROCESSING</p>
       <h1>{line}</h1>
-      <p className="loading-small">正在整理 24 次现场反应，马上归档。</p>
+      <p className="loading-small">正在整理 24 次现场反应，马上出结果。</p>
       <button className="skip-action" type="button" onClick={onSkip}>跳过等待 →</button>
     </section>
   );
@@ -579,7 +583,7 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
   return (
     <section className="result-screen page-enter" aria-labelledby="result-title">
       <div className="result-file-head">
-        <div><p className="eyebrow"><span className="red-dot" /> PERSONALITY FILE / FSA-002</p><p className="result-timecode">TRAVEL GROUP / FIELD REPORT</p></div>
+        <div><p className="eyebrow"><span className="red-dot" /> PERSONALITY FILE / HXT-002</p><p className="result-timecode">TRAVEL GROUP / FIELD REPORT</p></div>
         <span className={`result-symbol symbol-${RESULT_SYMBOLS[result.primaryType]}`} aria-hidden="true" />
       </div>
       <div className="result-hero">
@@ -656,7 +660,7 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
 
       <section className="result-section share-section" aria-labelledby="share-title">
         <div className="share-card-preview" aria-label="3:4 分享档案卡预览" role="img">
-          <div className="share-card-header"><span>FLOWER STUDIES ARCHIVE</span><span>CASE #002</span></div>
+          <div className="share-card-header"><span>花学测试 / FLOWER STUDIES</span><span>CASE #002</span></div>
           <p className="share-card-kicker">{primary.englishName}</p>
           <h2>{primary.personName}</h2>
           <p className="share-card-title">{primary.title}</p>
@@ -664,19 +668,19 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
           <div className="share-card-bars">
             {DIMENSION_ORDER.map((dimension) => <span key={dimension} style={{ height: `${Math.max(18, result.sixDimensionProfile[dimension] * 0.52)}px` }} title={`${DIMENSIONS[dimension].displayName} ${result.sixDimensionProfile[dimension]}`} />)}
           </div>
-          <div className="share-card-footer"><span>3:4 ARCHIVE CARD</span><strong>{content.keywords[0]}</strong></div>
+          <div className="share-card-footer"><span>3:4 HUAXUE TEST</span><strong>{content.keywords[0]}</strong></div>
         </div>
         <div className="share-copy-block">
           <p className="eyebrow"><span className="red-dot" /> SHAREABLE FILE</p>
           <h2 id="share-title">把这份档案带走</h2>
           <p>一张适合发出去的 3:4 花学档案卡，把你的类型和名场面带走。</p>
-          <a className="download-action" href={shareCardHref} download={`flower-studies-${result.primaryType}-archive.svg`}>下载 3:4 档案卡 <span>↘</span></a>
+          <a className="download-action" href={shareCardHref} download={`huaxue-test-${result.primaryType}.svg`}>下载 3:4 花学卡 <span>↘</span></a>
           <p className="share-format-note">9:16 竖屏版本接口已预留 · 可直接使用结果页截图分享</p>
         </div>
       </section>
 
       <div className="result-disclaimer"><strong>娱乐原型说明</strong><p>{RESULT_DISCLAIMER}</p></div>
-      <div className="result-actions"><button className="primary-action" type="button" onClick={onRetake}><span>重新鉴定</span><span className="action-arrow">↗</span></button><button className="text-action" type="button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>回到档案顶部 ↑</button></div>
+      <div className="result-actions"><button className="primary-action" type="button" onClick={onRetake}><span>再测一次</span><span className="action-arrow">↗</span></button><button className="text-action" type="button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>回到结果顶部 ↑</button></div>
     </section>
   );
 }

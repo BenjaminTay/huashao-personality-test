@@ -216,7 +216,7 @@ button:disabled { cursor: not-allowed; }
 }
 
 .home-title::after {
-  content: "ARCHIVE COPY";
+  content: "HUAXUE TEST / COPY";
   position: absolute;
   right: 3px;
   bottom: -17px;
@@ -528,7 +528,7 @@ button:disabled { cursor: not-allowed; }
 }
 
 .loading-screen::before {
-  content: "FLOWER STUDIES LAB / ANALOG PROCESSING";
+  content: "HUAXUE TEST / ANALOG PROCESSING";
   position: absolute;
   top: 20px;
   right: 5%;
@@ -605,7 +605,7 @@ button:disabled { cursor: not-allowed; }
 }
 
 .result-screen::before {
-  content: "ARCHIVE COPY / KEEP FOR YOUR RECORDS";
+  content: "HUAXUE TEST / KEEP FOR YOUR RECORDS";
   position: absolute;
   top: 145px;
   right: -66px;
