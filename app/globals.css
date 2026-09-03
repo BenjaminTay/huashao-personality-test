@@ -1434,3 +1434,77 @@ button.download-action {
   .share-sheet-backdrop,
   .share-sheet { animation: none; }
 }
+
+/* 幕末观察员批注（Act System 体验 pass）：回放上一幕行为的红笔档案条 */
+.observer-note {
+  width: min(640px, 94%);
+  margin: 34px 0 2px;
+  padding: 14px 18px 15px;
+  border: 1px dashed var(--archive-red);
+  background: rgba(182, 76, 62, .05);
+  text-align: left;
+  transform: rotate(-.6deg);
+  box-shadow: 5px 6px 0 rgba(213, 200, 180, .5);
+}
+
+.observer-kicker {
+  margin: 0 0 8px;
+  color: var(--archive-red);
+  font: 700 9px var(--font-mono);
+  letter-spacing: .16em;
+}
+
+.observer-line {
+  margin: 0;
+  color: var(--archive-red-dark);
+  font: 700 17px/1.6 var(--font-display);
+  letter-spacing: .01em;
+}
+
+@media (max-width: 760px) {
+  .observer-note { margin-top: 26px; padding: 12px 14px 13px; }
+  .observer-line { font-size: 15px; }
+}
+
+/* 四幕过场动效（盖章 + 分层入位）：数字盖章落下，内容依次跟上 */
+.act-screen .act-topline,
+.act-screen .act-home-action { animation: act-fade .3s ease both; }
+
+.act-screen .act-number { animation: act-stamp .6s cubic-bezier(.2, .9, .3, 1.2) .1s both; }
+
+.act-screen .eyebrow { animation: act-rise .34s ease .36s both; }
+.act-screen h1 { animation: act-rise .38s ease .44s both; }
+.act-screen .act-status { animation: act-rise .34s ease .54s both; }
+.act-screen .observer-note { animation: act-rise .42s ease .64s both; }
+.act-screen .act-notes { animation: act-rise .38s ease .78s both; }
+.act-screen .act-rule { animation: act-fade .4s ease 1s both; }
+.act-screen .primary-action { animation: act-rise .42s ease 1.18s both; }
+
+@keyframes act-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes act-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes act-stamp {
+  0% { opacity: 0; transform: translateY(-18px) scale(1.45) rotate(-6deg); }
+  55% { opacity: 1; transform: translateY(3px) scale(.94) rotate(1.4deg); }
+  100% { opacity: 1; transform: translateY(0) scale(1) rotate(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .act-screen .act-topline,
+  .act-screen .act-home-action,
+  .act-screen .act-number,
+  .act-screen .eyebrow,
+  .act-screen h1,
+  .act-screen .act-status,
+  .act-screen .observer-note,
+  .act-screen .act-notes,
+  .act-screen .act-rule,
+  .act-screen .primary-action { animation: none; }
+}
