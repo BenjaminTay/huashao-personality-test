@@ -1,6 +1,7 @@
 export type DimensionId = "R" | "S" | "B" | "D" | "G" | "I";
 export type OptionId = "A" | "B" | "C" | "D";
 export type ArchetypeId = "mao" | "xu" | "ning" | "zheng" | "chen" | "jing" | "yang";
+export type VisualSymbol = "map" | "truth" | "boundary" | "error-log" | "exit" | "repair" | "tourist";
 
 export interface QuizOption {
   id: OptionId;

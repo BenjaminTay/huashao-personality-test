@@ -2,18 +2,18 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ACTS, QUESTIONS, QUESTION_SET_VERSION } from "../data/questions";
-import { ARCHETYPES, type Archetype } from "../data/archetypes";
+import { ARCHETYPES } from "../data/archetypes";
 import { DIMENSIONS, DIMENSION_ORDER } from "../data/dimensions";
 import {
   RESULT_CONTENT,
   RESULT_DISCLAIMER,
-  type PersonalityResultContent,
 } from "../data/results";
 import type { ArchetypeId, OptionId } from "../data/types";
 import { POPULATION_SNAPSHOT } from "../data/population-stats";
 import { calculateResult } from "../lib/scoring";
 import { trackShareCard, trackTestComplete, trackTestStart } from "../lib/analytics";
 import type { AnswerMap, ComputedResult } from "../types";
+import { buildSharePosterSvg, getTestEntryUrl, SharePoster } from "../components/share-poster";
 
 type Screen = "home" | "quiz" | "act" | "loading" | "reveal" | "result";
 
@@ -38,16 +38,6 @@ const ACT_NOTES: Record<1 | 2 | 3 | 4, string[]> = {
   2: ["我没事", "别多想", "你怎么了"],
   3: ["先吃饭", "你觉得呢", "把话说清楚"],
   4: ["以后再约", "还联系吗", "下次见"],
-};
-
-const RESULT_SYMBOLS: Record<ArchetypeId, string> = {
-  mao: "map",
-  xu: "truth",
-  ning: "boundary",
-  zheng: "error-log",
-  chen: "exit",
-  jing: "repair",
-  yang: "tourist",
 };
 
 const SAMPLE_PERCENT_MIN = 50;
@@ -135,62 +125,6 @@ function readSession(): {
 
 function formatQuestionNumber(value: string | number): string {
   return String(value).replace(/^Q/, "").padStart(2, "0");
-}
-
-function escapeXml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&apos;");
-}
-
-function wrapShareText(value: string, maxLength: number): string[] {
-  const characters = Array.from(value);
-  const lines: string[] = [];
-  for (let index = 0; index < characters.length; index += maxLength) {
-    lines.push(characters.slice(index, index + maxLength).join(""));
-  }
-  return lines;
-}
-
-function createShareCardSvg(
-  archetype: Archetype,
-  content: PersonalityResultContent,
-  displayScores: ComputedResult["sixDimensionProfile"],
-): string {
-  const shareLines = wrapShareText(content.share, 18).slice(0, 3);
-  const dimensionRows = DIMENSION_ORDER.map((dimension, index) => {
-    const definition = DIMENSIONS[dimension];
-    const score = displayScores[dimension];
-    const y = 790 + index * 43;
-    return `<text x="72" y="${y}" fill="#6f7069" font-family="monospace" font-size="16">${dimension}  ${escapeXml(definition.displayName)}</text>
-      <rect x="310" y="${y - 14}" width="360" height="9" fill="#d5c8b4"/>
-      <rect x="310" y="${y - 14}" width="${score * 3.6}" height="9" fill="#4c7180"/>
-      <text x="730" y="${y}" fill="#87392f" font-family="monospace" font-size="18">${score}</text>`;
-  }).join("\n");
-
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1200" viewBox="0 0 900 1200">
-    <rect width="900" height="1200" fill="#f3efe6"/>
-    <path d="M48 48H852M48 1152H852" stroke="#b64c3e" stroke-width="2" opacity=".55"/>
-    <path d="M48 138H852" stroke="#1d211d" stroke-width="1" opacity=".22"/>
-    <text x="60" y="88" fill="#1d211d" font-family="monospace" font-size="16" letter-spacing="3">花学测试 / FLOWER STUDIES</text>
-    <text x="840" y="88" fill="#6f7069" font-family="monospace" font-size="15" text-anchor="end">CASE #002</text>
-    <text x="60" y="235" fill="#b64c3e" font-family="serif" font-size="28" letter-spacing="10">花 学</text>
-    <text x="60" y="295" fill="#1d211d" font-family="serif" font-size="62" font-weight="700" letter-spacing="8">测 试</text>
-    <text x="60" y="360" fill="#b64c3e" font-family="monospace" font-size="17" letter-spacing="4">${escapeXml(archetype.englishName)}</text>
-    <text x="60" y="455" fill="#1d211d" font-family="serif" font-size="78" font-weight="700">${escapeXml(archetype.personName)}</text>
-    <text x="60" y="500" fill="#4c7180" font-family="serif" font-size="30" font-weight="700">${escapeXml(archetype.title)}</text>
-    <path d="M60 545H840" stroke="#1d211d" stroke-width="1" opacity=".22"/>
-    ${shareLines.map((line, index) => `<text x="60" y="${590 + index * 30}" fill="#4f514b" font-family="serif" font-size="21">${escapeXml(line)}</text>`).join("\n")}
-    <text x="60" y="710" fill="#b64c3e" font-family="monospace" font-size="14" letter-spacing="2">SIX-DIMENSION FIELD READOUT</text>
-    ${dimensionRows}
-    <circle cx="750" cy="1035" r="61" fill="none" stroke="#b64c3e" stroke-width="2"/>
-    <text x="750" y="1028" fill="#b64c3e" font-family="monospace" font-size="15" text-anchor="middle">HEART-EYE</text>
-    <text x="750" y="1052" fill="#b64c3e" font-family="serif" font-size="22" text-anchor="middle">${escapeXml(content.keywords[0])}</text>
-    <text x="60" y="1110" fill="#6f7069" font-family="monospace" font-size="14">纯娱乐原型 · 3:4 HUAXUE TEST CARD</text>
-  </svg>`;
 }
 
 export default function Home() {
@@ -621,9 +555,10 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
     POPULATION_SNAPSHOT.completions[result.primaryType],
     sampleTotal,
   );
+  const testUrl = useMemo(() => getTestEntryUrl(), []);
   const shareCardSvg = useMemo(
-    () => createShareCardSvg(primary, content, result.sixDimensionProfile),
-    [content, primary, result.sixDimensionProfile],
+    () => buildSharePosterSvg(primary, content, result.sixDimensionProfile, testUrl),
+    [content, primary, result.sixDimensionProfile, testUrl],
   );
   const shareCardHref = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(shareCardSvg)}`;
 
@@ -631,7 +566,7 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
     <section className="result-screen page-enter" aria-labelledby="result-title">
       <div className="result-file-head">
         <div><p className="eyebrow"><span className="red-dot" /> PERSONALITY FILE / HXT-002</p><p className="result-timecode">TRAVEL GROUP / FIELD REPORT</p></div>
-        <span className={`result-symbol symbol-${RESULT_SYMBOLS[result.primaryType]}`} aria-hidden="true" />
+        <span className={`result-symbol symbol-${primary.visualSymbol}`} aria-hidden="true" />
       </div>
       <div className="result-hero">
         <p className="result-english">{primary.englishName}</p>
@@ -744,28 +679,23 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
       </section>
 
       <section className="result-section share-section" aria-labelledby="share-title">
-        <div className="share-card-preview" aria-label="3:4 分享档案卡预览" role="img">
-          <div className="share-card-header"><span>花学测试 / FLOWER STUDIES</span><span>CASE #002</span></div>
-          <p className="share-card-kicker">{primary.englishName}</p>
-          <h2>{primary.personName}</h2>
-          <p className="share-card-title">{primary.title}</p>
-          <p className="share-card-copy">{content.share}</p>
-          <div className="share-card-bars">
-            {DIMENSION_ORDER.map((dimension) => <span key={dimension} style={{ height: `${Math.max(18, result.sixDimensionProfile[dimension] * 0.52)}px` }} title={`${DIMENSIONS[dimension].displayName} ${result.sixDimensionProfile[dimension]}`} />)}
-          </div>
-          <div className="share-card-footer"><span>3:4 HUAXUE TEST</span><strong>{content.keywords[0]}</strong></div>
-        </div>
+        <SharePoster
+          archetype={primary}
+          content={content}
+          displayScores={result.sixDimensionProfile}
+          testUrl={testUrl}
+        />
         <div className="share-copy-block">
           <p className="eyebrow"><span className="red-dot" /> SHAREABLE FILE</p>
-          <h2 id="share-title">把这份档案带走</h2>
-          <p>一张适合发出去的 3:4 花学档案卡，把你的类型和名场面带走。</p>
+          <h2 id="share-title">把这张海报带走</h2>
+          <p>独立排版的 3:4 花少人格海报，包含你的称号、暴击、突出维度、心眼子余额和测试二维码。</p>
           <a
             className="download-action"
             href={shareCardHref}
-            download={`huaxue-test-${result.primaryType}.svg`}
+            download={`huaxue-share-poster-${result.primaryType}.svg`}
             onClick={() => trackShareCard()}
-          >下载 3:4 花学卡 <span>↘</span></a>
-          <p className="share-format-note">9:16 竖屏版本接口已预留 · 可直接使用结果页截图分享</p>
+          >下载 3:4 海报 <span>↘</span></a>
+          <p className="share-format-note">独立海报布局 · SVG 矢量下载 · 二维码指向当前测试入口</p>
         </div>
       </section>
 
