@@ -19,6 +19,7 @@ import {
 } from "../lib/analytics";
 import type { AnswerMap, ComputedResult } from "../types";
 import {
+  balanceFollowUp,
   buildSharePosterSvg,
   getTestEntryUrl,
   normalizeShareName,
@@ -172,6 +173,7 @@ export default function Home() {
   const [homeSubtitle, setHomeSubtitle] = useState(HOME_SUBTITLES[0]);
   const [previewType, setPreviewType] = useState<ArchetypeId | null>(null);
   const [previewEnabled, setPreviewEnabled] = useState(false);
+  const [bootStuck, setBootStuck] = useState(false);
   const previewBackup = useRef<{
     answers: AnswerMap;
     currentIndex: number;
@@ -370,8 +372,26 @@ export default function Home() {
     setScreen("quiz");
   }
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => setBootStuck(true), 6000);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   if (!hydrated) {
-    return <div className="boot-screen">正在打开档案……</div>;
+    return (
+      <div className="boot-screen">
+        <p>正在打开档案……</p>
+        {bootStuck && (
+          <button
+            className="boot-reload"
+            type="button"
+            onClick={() => window.location.reload()}
+          >
+            一直没有加载出来？点我刷新 →
+          </button>
+        )}
+      </div>
+    );
   }
 
   return (
@@ -653,8 +673,8 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
   const cleanShareName = normalizeShareName(shareName);
   const testUrl = useMemo(() => getTestEntryUrl(), []);
   const shareCardSvg = useMemo(
-    () => buildSharePosterSvg(primary, content, result.sixDimensionProfile, testUrl, cleanShareName),
-    [cleanShareName, content, primary, result.sixDimensionProfile, testUrl],
+    () => buildSharePosterSvg(primary, content, result.sixDimensionProfile, testUrl, cleanShareName, leastLike),
+    [cleanShareName, content, leastLike, primary, result.sixDimensionProfile, testUrl],
   );
   const shareCardHref = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(shareCardSvg)}`;
 
@@ -679,7 +699,7 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
           <aside className="heart-card" aria-label="心眼子状态">
             <p className="heart-card-kicker">心眼子余额</p>
             <strong>{content.heartEyeBalance}</strong>
-            <p className="heart-card-copy">{content.heartschemes}</p>
+            <p className="heart-card-copy">{balanceFollowUp(content.heartschemes)}</p>
           </aside>
         </div>
       </div>
@@ -738,6 +758,7 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
           displayScores={result.sixDimensionProfile}
           testUrl={testUrl}
           displayName={cleanShareName}
+          leastLike={leastLike}
         />
         <div className="share-copy-block">
           <p className="eyebrow"><span className="red-dot" /> 分享现场</p>

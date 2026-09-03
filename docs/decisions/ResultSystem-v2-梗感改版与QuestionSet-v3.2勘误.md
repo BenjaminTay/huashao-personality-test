@@ -147,3 +147,23 @@ zheng 不采用本人冲突语境台词——郑爽流传原话普遍处于高�
 - [x] docs/research/06-待人工核验清单.md V-001 状态
 - [x] lint / typecheck / vitest / diagnose:strict 通过
 - [ ] 390px 与桌面宽度人工目检（发布前）
+
+
+## 7. Result System v2.4 补充记录（2026-09-03，分享海报优化）
+
+产品负责人在 v2.3 验收后对分享海报提出 5 点意见，本修订（内容字段未变，`RESULT_CONTENT_VERSION` → 2.4）：
+
+1. 名场面区在删除出处徽章后，改放 recall.note（损友批注），海报的分析与梗浓度更高；
+2. "心眼子余额"大字加大（DOM 与 SVG 同步，SVG 43→58px）；
+3. 二维码缩小（SVG 二维码区 184→156，DOM 右列 32%→26%）；
+4. 删除海报上的出处行（如"宁静 · 花少2 拒绝名场面（流传版）"），出处仍保留在 data/results.ts recall.source 供研究与追踪，页面不再展示；
+5. 心眼子余额与解释句重复问题：heartschemes 文案以 heartEyeBalance 开头（如"拉完了。特别说明…"），
+   新增展示层工具 `balanceFollowUp`（components/share-poster.tsx 导出）在已有大字余额的语境下
+   去掉首句只保留解释；分享海报与页面 hero 的心眼子卡同步使用。
+
+追加（同日，仍在 v2.4 内，产品负责人基于海报评审确认）：
+- 修复 TOP 02 维度标签语义：条形下方按分数显示 highLabel/lowLabel（此前固定 lowLabel，高分维度会显示反义文案）；
+- 二维码引导文字"扫码测测你是谁"→"扫码对号入座"（DOM + SVG）；
+- 海报底部新增"你的绝缘人格：xx型"互动行（SharePoster 与 buildSharePosterSvg 新增 leastLike 可选参数，page 传入 result.leastLikeType；未传时不影响输出）；
+- footer 去工程腔：原"纯娱乐原型 · 3:4 SHARE POSTER + visualSymbol/24Q"改为"纯娱乐 · 花学考古档案 + englishName"。
+

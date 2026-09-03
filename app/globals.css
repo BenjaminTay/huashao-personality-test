@@ -42,6 +42,15 @@ button:disabled { cursor: not-allowed; }
 .brand-mark { color: var(--archive-red); font-size: 18px; line-height: .7; }
 .header-case { letter-spacing: .08em; }
 .boot-screen { min-height: 100svh; display: grid; place-items: center; color: var(--muted-ink); font: 12px var(--font-mono); letter-spacing: .1em; }
+.boot-reload {
+  margin-top: 18px;
+  padding: 10px 16px;
+  border: 1px solid var(--archive-red);
+  background: transparent;
+  color: var(--archive-red-dark);
+  cursor: pointer;
+  font: 12px var(--font-display);
+}
 .page-enter { animation: paper-in .46s cubic-bezier(.2,.8,.2,1) both; }
 @keyframes paper-in { from { opacity: 0; transform: translateY(10px) rotate(.2deg); } to { opacity: 1; transform: translateY(0) rotate(0); } }
 
@@ -1043,14 +1052,14 @@ button:disabled { cursor: not-allowed; }
   -webkit-line-clamp: 4;
 }
 
-.share-poster-quote-src {
-  margin: 3% 0 0;
+.share-poster-quote-note {
+  display: -webkit-box;
+  margin: 2.5% 0 0;
   overflow: hidden;
   color: var(--muted-ink);
-  font: 600 clamp(6px, 2.1cqw, 9px) var(--font-mono);
-  letter-spacing: .08em;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  font: clamp(8px, 2.7cqw, 12px)/1.45 var(--font-display);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .share-poster-dimensions { margin-top: 4%; }
@@ -1060,13 +1069,14 @@ button:disabled { cursor: not-allowed; }
 .share-poster-mini-bar { display: block; height: 4px; margin-top: 5%; background: var(--paper-dark); }
 .share-poster-mini-bar i { display: block; height: 100%; background: var(--poster-secondary); }
 
-.share-poster-bottom { display: grid; grid-template-columns: minmax(0, 1fr) 32%; align-items: end; gap: 6%; margin-top: auto; padding-top: 5%; }
+.share-poster-bottom { display: grid; grid-template-columns: minmax(0, 1fr) 26%; align-items: end; gap: 5%; margin-top: auto; padding-top: 5%; }
 .share-poster-heart { min-width: 0; }
-.share-poster-heart strong { display: block; margin-top: 4%; color: var(--ink); font: 700 clamp(17px, 5.7cqw, 24px)/1.05 var(--font-display); letter-spacing: -.04em; }
-.share-poster-heart > p:last-child { display: -webkit-box; margin: 5% 0 0; overflow: hidden; color: var(--muted-ink); font: clamp(8px, 2.35cqw, 10px)/1.4 var(--font-display); -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-.share-poster-qr-wrap { padding: 6% 6% 5%; background: var(--paper-deep); border: 1px solid rgba(29, 33, 29, .18); }
+.share-poster-heart strong { display: block; margin-top: 4%; color: var(--ink); font: 700 clamp(22px, 7cqw, 31px)/1.05 var(--font-display); letter-spacing: -.04em; }
+.share-poster-heart-copy { display: -webkit-box; margin: 5% 0 0; overflow: hidden; color: var(--muted-ink); font: clamp(8px, 2.6cqw, 11px)/1.5 var(--font-display); -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.share-poster-insulate { margin: 6% 0 0; overflow: hidden; color: var(--poster-accent); font: 600 clamp(7px, 2.3cqw, 10px) var(--font-mono); letter-spacing: .08em; white-space: nowrap; text-overflow: ellipsis; }
+.share-poster-qr-wrap { padding: 5% 4% 4%; background: var(--paper-deep); border: 1px solid rgba(29, 33, 29, .18); }
 .share-poster-qr { display: block; width: 100%; aspect-ratio: 1; }
-.share-poster-qr-wrap p { margin: 5% 0 0; color: var(--ink); font: 600 clamp(7px, 2.45cqw, 10px) var(--font-mono); text-align: center; white-space: nowrap; }
+.share-poster-qr-wrap p { margin: 5% 0 0; color: var(--ink); font: 600 clamp(7px, 2.3cqw, 9px) var(--font-mono); line-height: 1.45; text-align: center; }
 .share-poster-footer { margin-top: 4%; padding-top: 3%; border-top: 1px solid color-mix(in srgb, var(--poster-accent) 52%, transparent); }
 
 .share-personalize {

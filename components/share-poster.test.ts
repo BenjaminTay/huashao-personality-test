@@ -35,11 +35,11 @@ describe("share poster", () => {
 
       expect(poster).toContain('width="1080" height="1440" viewBox="0 0 1080 1440"');
       expect(poster).toContain(ARCHETYPES[id].personName);
-      expect(poster).toContain(ARCHETYPES[id].visualSymbol.toUpperCase());
+      expect(poster).toContain(ARCHETYPES[id].englishName);
       expect(poster).toContain("名场面 / ORIGINAL LINE");
       expect(poster).toContain("心眼子余额");
       expect(poster).toContain(RESULT_CONTENT[id].heartEyeBalance);
-      expect(poster).toContain("扫码测测你是谁");
+      expect(poster).toContain("扫码领取你的花学人格");
       expect(poster).toContain('shape-rendering="crispEdges"');
     });
   });

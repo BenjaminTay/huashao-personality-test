@@ -28,6 +28,7 @@ interface SharePosterProps {
   displayScores: DimensionVector;
   testUrl: string;
   displayName?: string;
+  leastLike?: Archetype;
 }
 
 interface QrMatrix {
@@ -189,25 +190,36 @@ export function normalizeShareName(value: string): string {
     .slice(0, 10);
 }
 
+/**
+ * heartschemes 文案以 heartEyeBalance 短语开头（如"拉完了。特别说明…"）。
+ * 当展示区已有大字余额时，小字应去掉重复的首句，只保留后面的解释。
+ */
+export function balanceFollowUp(value: string): string {
+  const index = value.indexOf("。");
+  return index >= 0 ? value.slice(index + 1).trim() : value;
+}
+
 export function buildSharePosterSvg(
   archetype: Archetype,
   content: PersonalityResultContent,
   displayScores: DimensionVector,
   testUrl: string,
   displayName = "",
+  leastLike?: Archetype,
 ): string {
   const palette = SYMBOL_PALETTES[archetype.visualSymbol];
   const cleanName = normalizeShareName(displayName);
   const personalizedLabel = cleanName ? `${cleanName}，你的花少人格是` : "你的花少人格是";
   const matrix = createQrMatrix(testUrl);
-  const qrTotal = 184;
+  const qrTotal = 156;
   const qrModule = qrTotal / (matrix.size + 8);
   const topDimensions = getTopDimensionIds(displayScores);
   const quoteLines = wrapText(`“${content.recall.quote}”`, 16).slice(0, 2);
-  const quoteSrc = content.recall.source;
-  const heartLines = wrapText(content.heartschemes, 23).slice(0, 2);
-  const qrX = 814;
-  const qrY = 1124;
+  const noteLines = wrapText(content.recall.note, 38).slice(0, quoteLines.length > 1 ? 1 : 2);
+  const heartCopyLines = wrapText(balanceFollowUp(content.heartschemes), 20).slice(0, 2);
+  const qrX = 824;
+  const qrY = 1134;
+  const noteStart = 664 + quoteLines.length * 38 + 26;
   const dimensionMarkup = topDimensions.map((dimension, index) => {
     const definition = DIMENSIONS[dimension];
     const score = displayScores[dimension];
@@ -218,7 +230,7 @@ export function buildSharePosterSvg(
       <text x="${x + 410}" y="922" fill="${palette.accent}" font-family="monospace" font-size="24" text-anchor="end">${score}</text>
       <rect x="${x}" y="944" width="${barWidth}" height="10" fill="${PAPER_DEEP}"/>
       <rect x="${x}" y="944" width="${Math.max(8, barWidth * score / 100)}" height="10" fill="${palette.secondary}"/>
-      <text x="${x}" y="980" fill="${MUTED}" font-family="serif" font-size="14">${escapeXml(definition.lowLabel)}</text>
+      <text x="${x}" y="980" fill="${MUTED}" font-family="serif" font-size="14">${escapeXml(score >= 50 ? definition.highLabel : definition.lowLabel)}</text>
     </g>`;
   }).join("");
   const qrModules = qrPath(matrix, qrX + qrModule * 4, qrY + qrModule * 4, qrModule);
@@ -240,27 +252,28 @@ export function buildSharePosterSvg(
     <text x="72" y="458" fill="${INK}" font-family="serif" font-size="102" font-weight="700" letter-spacing="-5">${escapeXml(archetype.personName)}</text>
     <text x="72" y="522" fill="${palette.secondary}" font-family="serif" font-size="38" font-weight="700">${escapeXml(archetype.title)}</text>
     ${symbolSvg(archetype.visualSymbol, palette.accent, palette.secondary, 870, 250, 1.32)}
-    <rect x="72" y="576" width="936" height="222" fill="${palette.wash}" stroke="${palette.accent}" stroke-opacity=".26"/>
-    <text x="102" y="620" fill="${palette.accent}" font-family="monospace" font-size="15" letter-spacing="3">名场面 / ORIGINAL LINE</text>
-    ${quoteLines.map((line, index) => `<text x="102" y="${680 + index * 36}" fill="${INK}" font-family="serif" font-size="36" font-weight="700">${escapeXml(line)}</text>`).join("")}
-    <text x="102" y="${682 + quoteLines.length * 36}" fill="${MUTED}" font-family="monospace" font-size="13" letter-spacing="1">${escapeXml(quoteSrc)}</text>
+    <rect x="72" y="566" width="936" height="252" fill="${palette.wash}" stroke="${palette.accent}" stroke-opacity=".26"/>
+    <text x="102" y="606" fill="${palette.accent}" font-family="monospace" font-size="15" letter-spacing="3">名场面 / ORIGINAL LINE</text>
+    ${quoteLines.map((line, index) => `<text x="102" y="${664 + index * 38}" fill="${INK}" font-family="serif" font-size="36" font-weight="700">${escapeXml(line)}</text>`).join("")}
+    ${noteLines.map((line, index) => `<text x="102" y="${noteStart + index * 26}" fill="${MUTED}" font-family="serif" font-size="14">${escapeXml(line)}</text>`).join("")}
     <text x="72" y="874" fill="${palette.accent}" font-family="monospace" font-size="15" letter-spacing="3">TOP 02 / 两个最突出维度</text>
     ${dimensionMarkup}
     <path d="M72 1030H1008" stroke="${INK}" stroke-opacity=".22"/>
-    <text x="72" y="1080" fill="${palette.accent}" font-family="monospace" font-size="15" letter-spacing="3">心眼子余额 / HEART-EYE BALANCE</text>
-    <text x="72" y="1146" fill="${INK}" font-family="serif" font-size="43" font-weight="700">${escapeXml(content.heartEyeBalance)}</text>
-    ${heartLines.map((line, index) => `<text x="72" y="${1190 + index * 27}" fill="${MUTED}" font-family="serif" font-size="18">${escapeXml(line)}</text>`).join("")}
-    <rect x="790" y="1080" width="218" height="260" fill="${PAPER_DEEP}" stroke="${INK}" stroke-opacity=".18"/>
-    <rect x="806" y="1116" width="184" height="184" fill="${PAPER}"/>
+    <text x="72" y="1078" fill="${palette.accent}" font-family="monospace" font-size="15" letter-spacing="3">心眼子余额 / HEART-EYE BALANCE</text>
+    <text x="72" y="1156" fill="${INK}" font-family="serif" font-size="58" font-weight="700">${escapeXml(content.heartEyeBalance)}</text>
+    ${heartCopyLines.map((line, index) => `<text x="72" y="${1204 + index * 30}" fill="${MUTED}" font-family="serif" font-size="20">${escapeXml(line)}</text>`).join("")}
+    ${leastLike ? `<text x="72" y="1278" fill="${palette.accent}" font-family="monospace" font-size="15" letter-spacing="2">你的绝缘人格：${escapeXml(leastLike.personName)}</text>` : ""}
+    <rect x="798" y="1086" width="210" height="252" fill="${PAPER_DEEP}" stroke="${INK}" stroke-opacity=".18"/>
+    <rect x="824" y="1134" width="${qrTotal}" height="${qrTotal}" fill="${PAPER}"/>
     <path d="${qrModules}" fill="${INK}" shape-rendering="crispEdges"/>
-    <text x="899" y="1324" fill="${INK}" font-family="monospace" font-size="13" text-anchor="middle" letter-spacing="1">扫码测测你是谁</text>
+    <text x="903" y="1316" fill="${INK}" font-family="monospace" font-size="13" text-anchor="middle" letter-spacing="1">扫码领取你的花学人格</text>
     <path d="M72 1362H1008" stroke="${palette.accent}" stroke-opacity=".55"/>
-    <text x="72" y="1388" fill="${MUTED}" font-family="monospace" font-size="13" letter-spacing="2">纯娱乐原型 · 3:4 SHARE POSTER</text>
-    <text x="1008" y="1388" fill="${palette.accent}" font-family="monospace" font-size="13" text-anchor="end">${escapeXml(archetype.visualSymbol.toUpperCase())} / 24Q</text>
+    <text x="72" y="1388" fill="${MUTED}" font-family="monospace" font-size="13" letter-spacing="2">纯娱乐 · 花学考古档案</text>
+    <text x="1008" y="1388" fill="${palette.accent}" font-family="monospace" font-size="13" text-anchor="end">${escapeXml(archetype.englishName)}</text>
   </svg>`;
 }
 
-export function SharePoster({ archetype, content, displayScores, testUrl, displayName = "" }: SharePosterProps) {
+export function SharePoster({ archetype, content, displayScores, testUrl, displayName = "", leastLike }: SharePosterProps) {
   const palette = SYMBOL_PALETTES[archetype.visualSymbol];
   const topDimensions = getTopDimensionIds(displayScores);
   const cleanName = normalizeShareName(displayName);
@@ -290,7 +303,7 @@ export function SharePoster({ archetype, content, displayScores, testUrl, displa
       <section className="share-poster-punch">
         <p className="share-poster-section-label">名场面 / ORIGINAL LINE</p>
         <p className="share-poster-quote">“{content.recall.quote}”</p>
-        <p className="share-poster-quote-src">{content.recall.source}</p>
+        <p className="share-poster-quote-note">{content.recall.note}</p>
       </section>
       <section className="share-poster-dimensions" aria-label="两个最突出维度">
         <p className="share-poster-section-label">TOP 02 / 两个最突出维度</p>
@@ -311,16 +324,17 @@ export function SharePoster({ archetype, content, displayScores, testUrl, displa
         <section className="share-poster-heart">
           <p className="share-poster-section-label">心眼子余额 / HEART-EYE</p>
           <strong>{content.heartEyeBalance}</strong>
-          <p>{content.heartschemes}</p>
+          <p className="share-poster-heart-copy">{balanceFollowUp(content.heartschemes)}</p>
+          {leastLike && <p className="share-poster-insulate">你的绝缘人格：{leastLike.personName}</p>}
         </section>
         <section className="share-poster-qr-wrap">
           <QrCode value={testUrl} />
-          <p>扫码测测你是谁</p>
+          <p>扫码领取你的花学人格</p>
         </section>
       </div>
       <footer className="share-poster-footer">
-        <span>纯娱乐原型 · 3:4 SHARE POSTER</span>
-        <span>{archetype.visualSymbol.toUpperCase()} / 24Q</span>
+        <span>纯娱乐 · 花学考古档案</span>
+        <span>{archetype.englishName}</span>
       </footer>
     </div>
   );
