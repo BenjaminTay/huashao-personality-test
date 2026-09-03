@@ -4,6 +4,7 @@
  *
  * 需要环境变量：
  *   GOATCOUNTER_SITE       形如 https://your-code.goatcounter.com
+ *                          （兼容带 /count 后缀的埋点地址）
  *   GOATCOUNTER_API_TOKEN  账户页面创建的只读 API token
  *   GOATCOUNTER_SINCE      统计起始日期 YYYY-MM-DD（默认 2026-09-01）
  *
@@ -13,7 +14,9 @@
 import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-const SITE = (process.env.GOATCOUNTER_SITE ?? "").replace(/\/+$/, "");
+const SITE = (process.env.GOATCOUNTER_SITE ?? "")
+  .replace(/\/+$/, "")
+  .replace(/\/count$/, "");
 const TOKEN = process.env.GOATCOUNTER_API_TOKEN ?? "";
 const SINCE = process.env.GOATCOUNTER_SINCE ?? "2026-09-01";
 
