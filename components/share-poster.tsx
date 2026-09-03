@@ -135,7 +135,7 @@ function QrCode({ value }: { value: string }) {
   );
 }
 
-export const PRODUCTION_TEST_URL = "https://benjamintay.github.io/huashao-personality-test/";
+export const PRODUCTION_TEST_URL = "https://huaxue-test.pages.dev/";
 
 export function getTestEntryUrl(): string {
   if (typeof window === "undefined") return PRODUCTION_TEST_URL;

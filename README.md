@@ -48,7 +48,7 @@
 
 ## 现在就去测
 
-👉 [开始花学测试](https://benjamintay.github.io/huashao-personality-test/)
+👉 [开始花学测试](https://huaxue-test.pages.dev/)
 
 测完记得把结果卡发到群里，然后观察谁第一个说：
 
