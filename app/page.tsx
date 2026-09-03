@@ -10,6 +10,7 @@ import {
   type PersonalityResultContent,
 } from "../data/results";
 import type { ArchetypeId, OptionId } from "../data/types";
+import { POPULATION_SNAPSHOT } from "../data/population-stats";
 import { calculateResult } from "../lib/scoring";
 import { trackShareCard, trackTestComplete, trackTestStart } from "../lib/analytics";
 import type { AnswerMap, ComputedResult } from "../types";
@@ -48,6 +49,33 @@ const RESULT_SYMBOLS: Record<ArchetypeId, string> = {
   jing: "repair",
   yang: "tourist",
 };
+
+const SAMPLE_PERCENT_MIN = 50;
+
+function formatSampleCount(value: number): string {
+  return value.toLocaleString("zh-CN");
+}
+
+function formatSampleDate(iso: string | null): string | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}/${month}/${day}`;
+}
+
+function getSampleTotal(): number {
+  return Object.values(POPULATION_SNAPSHOT.completions).reduce(
+    (sum, count) => sum + count,
+    0,
+  );
+}
+
+function getSamplePercent(count: number, total: number): number {
+  return total > 0 ? (count / total) * 100 : 0;
+}
 
 function isOptionId(value: unknown): value is OptionId {
   return value === "A" || value === "B" || value === "C" || value === "D";
@@ -560,6 +588,12 @@ function LoadingScreen({ line, onSkip }: { line: string; onSkip: () => void }) {
 function RevealScreen({ result, onOpen }: { result: ComputedResult; onOpen: () => void }) {
   const archetype = ARCHETYPES[result.primaryType];
   const content = RESULT_CONTENT[result.primaryType];
+  const sampleTotal = getSampleTotal();
+  const ownCount = POPULATION_SNAPSHOT.completions[result.primaryType];
+  const sampleLine =
+    sampleTotal >= SAMPLE_PERCENT_MIN
+      ? `测友坐标 · ${formatSampleCount(sampleTotal)} 人次里，${getSamplePercent(ownCount, sampleTotal).toFixed(1)}% 和你同为${archetype.personName}`
+      : null;
   return (
     <section className="reveal-screen page-enter" aria-labelledby="reveal-title">
       <p className="eyebrow"><span className="red-dot" /> RESULT REVEAL / FILE CLOSED</p>
@@ -568,6 +602,7 @@ function RevealScreen({ result, onOpen }: { result: ComputedResult; onOpen: () =
       <div className="reveal-line" />
       <p className="reveal-title">{archetype.title}</p>
       <p className="reveal-punchline">{content.punchline}</p>
+      {sampleLine && <p className="reveal-sample">{sampleLine}</p>}
       <button className="primary-action" type="button" onClick={onOpen}><span>打开完整档案</span><span className="action-arrow">↗</span></button>
     </section>
   );
@@ -579,6 +614,13 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
   const leastLike = ARCHETYPES[result.leastLikeType];
   const content = RESULT_CONTENT[result.primaryType];
   const secondaryContent = RESULT_CONTENT[result.secondaryType];
+  const sampleTotal = getSampleTotal();
+  const sampleDate = formatSampleDate(POPULATION_SNAPSHOT.generatedAt);
+  const sampleShowPercent = sampleTotal >= SAMPLE_PERCENT_MIN;
+  const ownSamplePercent = getSamplePercent(
+    POPULATION_SNAPSHOT.completions[result.primaryType],
+    sampleTotal,
+  );
   const shareCardSvg = useMemo(
     () => createShareCardSvg(primary, content, result.sixDimensionProfile),
     [content, primary, result.sixDimensionProfile],
@@ -657,6 +699,44 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
           <article className="cast-card secondary-card"><span className="cast-label">副型 / SECONDARY</span><h3>{secondary.personName}</h3><p>{secondary.title}</p><div className="cast-strategy">更接近：{secondary.strategy}</div><small>{secondaryContent.keywords.join(" · ")}</small></article>
           <article className="cast-card least-card"><span className="cast-label">最不像 / LEAST LIKE</span><h3>{leastLike.personName}</h3><p>{leastLike.title}</p><div className="cast-strategy">相反方向：{leastLike.strategy}</div></article>
         </div>
+      </section>
+
+      <section className="result-section sample-section" aria-labelledby="sample-title">
+        <div className="section-heading">
+          <div><p className="eyebrow"><span className="red-dot" /> GROUP SAMPLE / 匿名样本</p><h2 id="sample-title">测友坐标</h2></div>
+          <span className="score-note">{sampleDate ? `截至 ${sampleDate}` : "等待首次采集"}</span>
+        </div>
+        {sampleTotal > 0 ? (
+          <>
+            <p className="sample-lead">
+              {sampleShowPercent
+                ? `已有 ${formatSampleCount(sampleTotal)} 人次完成鉴定，其中 ${ownSamplePercent.toFixed(1)}% 与你同为 ${primary.personName}。`
+                : `目前有 ${formatSampleCount(sampleTotal)} 人次完成鉴定，样本还在积累中——把档案卡发出去，让分母变大。`}
+            </p>
+            <div className="sample-list">
+              {(Object.keys(ARCHETYPES) as ArchetypeId[]).map((id) => {
+                const count = POPULATION_SNAPSHOT.completions[id];
+                const percent = getSamplePercent(count, sampleTotal);
+                const isOwn = id === result.primaryType;
+                return (
+                  <div className={`sample-row${isOwn ? " is-own" : ""}`} key={id}>
+                    <span className="sample-name">{ARCHETYPES[id].personName}</span>
+                    <div className="score-bar" role="img" aria-label={`${ARCHETYPES[id].personName} ${formatSampleCount(count)} 人次`}>
+                      <span style={{ width: count > 0 ? `${Math.max(percent, 3)}%` : "0%" }} />
+                    </div>
+                    <span className="sample-num">
+                      {formatSampleCount(count)}
+                      {sampleShowPercent && <i>{percent.toFixed(1)}%</i>}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="score-footnote">口径：完成全部 24 题计 1 人次 · 只统计主型 · 匿名聚合，不含任何答题内容 · 每日更新</p>
+          </>
+        ) : (
+          <p className="sample-empty">样本还没开张：你是第一位完成鉴定的吗？把档案卡发给朋友，让“测友坐标”长出来。</p>
+        )}
       </section>
 
       <section className="result-section meme-section" aria-label="花学彩蛋">

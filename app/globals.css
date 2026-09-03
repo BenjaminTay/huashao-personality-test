@@ -131,6 +131,10 @@ button:disabled { cursor: not-allowed; }
 .misunderstood-note span { display: block; margin-bottom: 5px; color: var(--archive-red); font: 9px var(--font-mono); letter-spacing: .1em; }
 .meme-section { background: rgba(182,76,62,.045); }
 
+/* Population sample */
+.reveal-sample { max-width: 620px; margin: -26px 0 38px; color: var(--archive-red-dark); font: 700 13px var(--font-mono); letter-spacing: .02em; }
+.sample-section { background: rgba(119,140,104,.05); }.sample-lead { max-width: 760px; margin: 0 0 24px; color: #454841; font: 15px/1.85 var(--font-display); }.sample-list { display: grid; gap: 9px; }.sample-row { display: grid; grid-template-columns: 130px minmax(110px, 1fr) auto; align-items: center; gap: 16px; padding: 11px 13px; border: 1px solid var(--line); background: rgba(250,247,239,.5); }.sample-row .score-bar { height: 6px; }.sample-row .score-bar span { background: var(--travel-blue); }.sample-row.is-own { border-color: var(--archive-red); background: rgba(182,76,62,.06); }.sample-row.is-own .score-bar span { background: var(--archive-red); }.sample-name { font: 15px var(--font-display); }.sample-row.is-own .sample-name { color: var(--archive-red-dark); font-weight: 700; }.sample-num { display: inline-flex; align-items: baseline; gap: 8px; color: var(--archive-red-dark); font: 12px var(--font-mono); }.sample-num i { color: var(--muted-ink); font-style: normal; font-size: 11px; }.sample-empty { margin: 0; padding: 18px 20px; border: 1px dashed var(--travel-blue); color: var(--muted-ink); font: 14px/1.8 var(--font-display); }
+
 @media (max-width: 760px) {
   .page-wrap, .archive-header, .site-footer { width: min(100% - 32px, 600px); }
   .archive-header { padding: 19px 0 14px; font-size: 9px; }.header-case { display: none; }.site-footer { font-size: 8px; flex-direction: column; gap: 5px; padding-bottom: 23px; }
@@ -151,6 +155,8 @@ button:disabled { cursor: not-allowed; }
   .sheet-topline { font-size: 7px; }
   .home-screen::before { top: 26px; right: 0; font-size: 7px; }
   .home-art::before { top: 8%; left: 0; font-size: 7px; }
+  .reveal-sample { margin: -20px 0 30px; font-size: 11px; line-height: 1.6; }
+  .sample-lead { font-size: 14px; line-height: 1.8; }.sample-row { grid-template-columns: 92px minmax(60px, 1fr) auto; gap: 10px; padding: 9px 10px; }.sample-name { font-size: 14px; }.sample-num { gap: 5px; font-size: 11px; }.sample-num i { font-size: 10px; }.sample-empty { font-size: 13px; padding: 15px 16px; }
 }
 
 /* Editorial field-log refinement: paper, travel notes, live-cut tension. */
