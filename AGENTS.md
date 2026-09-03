@@ -26,7 +26,7 @@
 
 - 题目 ID、选项 ID、题目顺序、四幕分组和 `Question Set v3.1` 版本（矩阵 v3.1 修订记录见 docs/decisions/QuestionSet-v3.1-评分矩阵提案.md）；
 - 24 道题的正文、96 个选项和新版 24×4 选项评分矩阵；
-- V3 的六维定义、七人格 v2 坐标和 `Result System v1` 文案；
+- V3 的六维定义、七人格 v2.1 坐标（v2.1 修订见 docs/decisions/ArchetypeCoordinates-v2.1-提案.md）和 `Result System v1` 文案；
 - 六维 ID：R、S、B、D、G、I，以及它们的语义；
 - 七个人格 ID、人格坐标和 `ArchetypeId`；
 - 主型匹配必须使用 `Calibrated Item-Profile Matching v3.0`，不得把旧的简单六维欧氏距离作为最终分类器；

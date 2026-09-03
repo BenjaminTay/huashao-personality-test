@@ -2,14 +2,14 @@ import { describe, expect, it } from "vitest";
 import { DIMENSION_ORDER } from "../data/dimensions";
 import type { ArchetypeId } from "../data/types";
 import {
-  BASELINE_V31,
+  BASELINE_V21,
   buildReport,
   formatReport,
   getNearestQuestionTable,
   listGaps,
 } from "./model-diagnostics";
 
-const ARCHETYPE_IDS = Object.keys(BASELINE_V31.randomPrimaryShares) as ArchetypeId[];
+const ARCHETYPE_IDS = Object.keys(BASELINE_V21.randomPrimaryShares) as ArchetypeId[];
 
 const DIAGNOSE = process.env.DIAGNOSE === "1";
 const STRICT = DIAGNOSE && process.env.DIAGNOSE_STRICT === "1";
@@ -32,25 +32,25 @@ describe("model diagnostics（数据完整性回归）", () => {
     }
   });
 
-  it("基线与 v3.1 快照一致（内容改动需人工更新快照）", () => {
-    expect(report.twinQuestionIds.length).toBe(BASELINE_V31.twinQuestionCount);
+  it("基线与 v2.1 快照一致（内容改动需人工更新快照）", () => {
+    expect(report.twinQuestionIds.length).toBe(BASELINE_V21.twinQuestionCount);
     for (const dimension of DIMENSION_ORDER) {
       expect(report.dimensionCoverage[dimension]).toBe(
-        BASELINE_V31.dimensionCoverage[dimension],
+        BASELINE_V21.dimensionCoverage[dimension],
       );
     }
     for (const archetypeId of ARCHETYPE_IDS) {
       expect(report.selfPaths[archetypeId].margin).toBeCloseTo(
-        BASELINE_V31.selfPathMargins[archetypeId],
+        BASELINE_V21.selfPathMargins[archetypeId],
         3,
       );
       expect(report.random.primary[archetypeId]).toBeCloseTo(
-        BASELINE_V31.randomPrimaryShares[archetypeId],
+        BASELINE_V21.randomPrimaryShares[archetypeId],
         3,
       );
     }
     expect(report.random.bestWorstRatio).toBeCloseTo(
-      BASELINE_V31.bestWorstRatio,
+      BASELINE_V21.bestWorstRatio,
       2,
     );
   });

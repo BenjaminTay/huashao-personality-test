@@ -13,6 +13,7 @@
 | 结果页、隐私和分享边界 | [decisions/结果系统产品体验与隐私决策.md](decisions/结果系统产品体验与隐私决策.md) |
 | 人格分布优化的基线与路线图 | [decisions/人格分布优化-诊断基线原则与路线图.md](decisions/人格分布优化-诊断基线原则与路线图.md) |
 | Question Set v3.1 评分矩阵合入记录 | [decisions/QuestionSet-v3.1-评分矩阵提案.md](decisions/QuestionSet-v3.1-评分矩阵提案.md) |
+| Archetype Coordinates v2.1 坐标合入记录 | [decisions/ArchetypeCoordinates-v2.1-提案.md](decisions/ArchetypeCoordinates-v2.1-提案.md) |
 | 研究材料和来源 | [research/](research/) |
 | 已废弃方案 | [archive/README.md](archive/README.md) |
 
@@ -55,7 +56,7 @@ docs/archive/                历史路线，不得被运行时代码引用
 | --- | --- |
 | 题库 | Question Set v3.1 |
 | 六维模型 | Dimension Model v2.0 |
-| 七人格坐标 | Archetype Profiles v2.0 |
+| 七人格坐标 | Archetype Profiles v2.1 |
 | 分类器 | Calibrated Item-Profile Matching v3.0（公式未变，矩阵为 v3.1） |
 | 结果文案 | Result System v1.1 |
 
@@ -84,6 +85,7 @@ docs/archive/                历史路线，不得被运行时代码引用
 - [结果系统、产品体验与隐私决策](decisions/结果系统产品体验与隐私决策.md)
 - [人格分布优化：诊断基线、原则与路线图](decisions/人格分布优化-诊断基线原则与路线图.md)
 - [Question Set v3.1 评分矩阵合入记录](decisions/QuestionSet-v3.1-评分矩阵提案.md)
+- [Archetype Coordinates v2.1 坐标合入记录](decisions/ArchetypeCoordinates-v2.1-提案.md)
 
 这里记录当前版本为什么这样做，以及旧方案为什么退出。修改冻结的题目 ID、选项 ID、题目顺序、六维、人格坐标或结果边界时，需要同步更新数据版本、测试和相关决策文档。
 

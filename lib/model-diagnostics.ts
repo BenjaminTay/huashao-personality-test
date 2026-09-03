@@ -16,33 +16,33 @@ const ARCHETYPE_IDS = Object.keys(ARCHETYPES) as ArchetypeId[];
 const OPTION_IDS: OptionId[] = ["A", "B", "C", "D"];
 const TIE_EPS = 1e-9;
 
-/** Question Set v3.1 基线快照（2026-09-03 合入，见 docs/decisions/QuestionSet-v3.1-评分矩阵提案.md）。
+/** Question Set v3.1 + Archetype Coordinates v2.1 基线快照（2026-09-03 合入）。
  *  孪生/槽位/出场指标统一使用“与分类器一致的题内校准贡献 argmax”口径。 */
-export const BASELINE_V31 = {
+export const BASELINE_V21 = {
   randomPrimaryShares: {
-    mao: 0.0915,
-    xu: 0.1546,
-    ning: 0.1259,
-    zheng: 0.2064,
-    chen: 0.1032,
-    jing: 0.1047,
-    yang: 0.2137,
+    mao: 0.0938,
+    xu: 0.1495,
+    ning: 0.1219,
+    zheng: 0.1983,
+    chen: 0.1049,
+    jing: 0.1097,
+    yang: 0.2219,
   } as Record<ArchetypeId, number>,
-  bestWorstRatio: 2.33,
-  twinQuestionCount: 3,
-  chenQuestionPresence: 10,
-  chenUniqueSlots: 10,
+  bestWorstRatio: 2.37,
+  twinQuestionCount: 2,
+  chenQuestionPresence: 13,
+  chenUniqueSlots: 13,
   dimensionCoverage: { R: 10, S: 8, B: 7, D: 8, G: 7, I: 8 } as Record<DimensionId, number>,
   selfPathMargins: {
-    mao: 5.075,
-    xu: 12.362,
-    ning: 11.213,
-    zheng: 16.417,
-    chen: 4.765,
-    jing: 5.47,
-    yang: 11.106,
+    mao: 9.061,
+    xu: 11.854,
+    ning: 11.754,
+    zheng: 13.941,
+    chen: 7.821,
+    jing: 9.022,
+    yang: 15.053,
   } as Record<ArchetypeId, number>,
-  weakestSelfPathMargin: 4.765,
+  weakestSelfPathMargin: 7.821,
 };
 
 /** 规划文档《人格分布优化》§4 的健康门槛（目标值，非均匀指标）。 */
@@ -55,20 +55,31 @@ export const TARGETS = {
   maxBestWorstRatio: 2.0,
 } as const;
 
-/** 每型的出场题数/唯一槽位下限（G3/G4）。
- *  chen 例外（≥10）：chen 式选项（看懂后退场/减少投入）在题库中天然稀缺，
- *  v3.1 接受与现状持平，补齐排到阶段 3 坐标拉开后。见规划文档 §4 注 ¹。 */
+/** 每型的出场题数/唯一槽位下限（G3/G4）。全部 ≥12。
+ *  注：v3.1 曾为 chen 设 ≥10 例外（其主场文本稀缺）；Archetype Coordinates v2.1
+ *  合入后 chen 已达 13，例外解除。 */
 export const MIN_QUESTION_PRESENCE: Record<ArchetypeId, number> = {
   mao: 12,
   xu: 12,
   ning: 12,
   zheng: 12,
-  chen: 10,
+  chen: 12,
   jing: 12,
   yang: 12,
 };
 export const MIN_UNIQUE_SLOTS: Record<ArchetypeId, number> = {
   ...MIN_QUESTION_PRESENCE,
+};
+
+/** G6 自洽领先分差下限。chen 按 7.5 验收（v2.1 提案 D5b：语义档位约束内局部上界 7.82）。 */
+export const MIN_SELF_PATH_MARGIN: Record<ArchetypeId, number> = {
+  mao: 8,
+  xu: 8,
+  ning: 8,
+  zheng: 8,
+  chen: 7.5,
+  jing: 8,
+  yang: 8,
 };
 
 export interface RandomBaselineStat {
@@ -352,12 +363,13 @@ export function listGaps(report: ModelDiagnosticsReport): {
       );
     }
     const margin = report.selfPaths[archetypeId].margin;
-    if (margin < TARGETS.minSelfPathMargin) {
+    const marginFloor = MIN_SELF_PATH_MARGIN[archetypeId];
+    if (margin < marginFloor) {
       push(
         failed,
         "G6",
         `${archetypeId}=${margin}`,
-        `≥ ${TARGETS.minSelfPathMargin}`,
+        `≥ ${marginFloor}`,
         `人格 ${archetypeId} 自洽路径领先分差过浅`,
       );
     }
@@ -379,14 +391,14 @@ const percent = (value: number) => `${(value * 100).toFixed(2)}%`;
 const pad = (value: string, width: number) => value.padEnd(width);
 
 export function formatReport(report: ModelDiagnosticsReport): string {
-  const baseline = BASELINE_V31;
+  const baseline = BASELINE_V21;
   const lines: string[] = [];
   lines.push("======================================");
   lines.push("花学模型诊断报告");
   lines.push(`版本 v${report.version} · 题库 ${report.questionCount} 题 / ${report.optionCount} 选项`);
   lines.push(`生成于 ${report.generatedAt}（MC ${report.sampleCount} 次，seed ${report.seed}）`);
   lines.push("--------------------------------------");
-  lines.push("六维维度覆盖（当前 vs 基线 v3.1）：");
+  lines.push("六维维度覆盖（当前 vs 基线 v2.1）：");
   for (const dimension of DIMENSION_ORDER) {
     lines.push(
       `  ${pad(dimension, 2)} ${pad(String(report.dimensionCoverage[dimension]), 3)} 题  基线 ${baseline.dimensionCoverage[dimension]} 题  ` +
