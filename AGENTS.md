@@ -24,7 +24,7 @@
 
 除非产品负责人明确批准并同步修改版本号，不得改变以下内容：
 
-- 题目 ID、选项 ID、题目顺序、四幕分组和 `Question Set v3.0 Final Candidate` 版本；
+- 题目 ID、选项 ID、题目顺序、四幕分组和 `Question Set v3.1` 版本（矩阵 v3.1 修订记录见 docs/decisions/QuestionSet-v3.1-评分矩阵提案.md）；
 - 24 道题的正文、96 个选项和新版 24×4 选项评分矩阵；
 - V3 的六维定义、七人格 v2 坐标和 `Result System v1` 文案；
 - 六维 ID：R、S、B、D、G、I，以及它们的语义；

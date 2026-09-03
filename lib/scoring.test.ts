@@ -20,7 +20,7 @@ describe("Calibrated Item-Profile Matching v3", () => {
   it("uses the complete V3 content shape", () => {
     const validation = validateQuestionSet();
     expect(validation.errors).toEqual([]);
-    expect(QUESTION_SET_VERSION).toBe("3.0");
+    expect(QUESTION_SET_VERSION).toBe("3.1");
     expect(validation.questionCount).toBe(24);
     expect(validation.optionCount).toBe(96);
     expect(Object.values(ARCHETYPES)).toHaveLength(7);

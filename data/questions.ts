@@ -1,8 +1,8 @@
 import { QUESTION_SCORING_V3 } from "./question-scoring.v3";
 import type { DimensionId, OptionId } from "./types";
 
-export const QUESTION_SET_VERSION = "3.0";
-export const QUESTION_SET_LABEL = "Question Set v3.0 Final Candidate";
+export const QUESTION_SET_VERSION = "3.1";
+export const QUESTION_SET_LABEL = "Question Set v3.1";
 
 export type Dimension = DimensionId;
 
