@@ -1,14 +1,9 @@
 import type { ArchetypeId } from "./types";
 
-// Result System v2.4（2026-09-03）：分享海报与心眼子卡的呈现优化（内容字段未变）：
-// - 海报（DOM + SVG）名场面区删除出处徽章行，改放 recall.note 损友批注（分析内容更饱满）；
-// - 心眼子余额大字放大；小字用 balanceFollowUp 去掉与大字重复的前缀句（heartschemes 以
-//   heartEyeBalance 开头，展示处不再重复）；页面 hero 心眼子卡同步去重；
-// - 二维码缩小（SVG 184→156 模块区，DOM 列宽 32%→26%）。
-export const RESULT_CONTENT_VERSION = "2.4";
-
-export const RESULT_DISCLAIMER =
-  "本结果是《花少2》节目呈现与互联网花学共同塑造的娱乐人格原型，不等同于对现实真人的心理诊断，也不代表完整、客观的真人性格。";
+// Result System v2.5（2026-09-03，产品负责人批准）：移除全部防御性文案——
+// 结果页底部"娱乐原型说明"免责声明下线、六维/测友脚注去口径化、海报"纯娱乐"字样删除。
+// 注意：这是产品负责人对 AGENTS.md 免责约束的显式覆盖，决策记录见 ResultSystem-v2 决策文 §8。
+export const RESULT_CONTENT_VERSION = "2.5";
 
 export interface RecallItem {
   quote: string;

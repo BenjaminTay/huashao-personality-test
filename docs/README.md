@@ -43,7 +43,7 @@ docs/archive/                历史路线，不得被运行时代码引用
 - data/question-scoring.v3.ts：24×4 选项评分矩阵；
 - data/dimensions.ts：六维定义和展示标签；
 - data/archetypes.ts：七个人格原型坐标与 `visualSymbol`；
-- data/results.ts：固定结果文案、`recall`（名场面回响金句）、`heartEyeBalance`、彩蛋和免责声明；
+- data/results.ts：固定结果文案、`recall`（名场面回响金句）、`heartEyeBalance` 与彩蛋；
 - data/population-stats.ts：测友坐标快照，生成方式见 scripts/sync-population.mjs；
 - components/share-poster.tsx：分享海报的唯一实现，内容只读 data/；
 - lib/scoring.ts：展示分、主型/副型/最不像和证据生成；
@@ -59,7 +59,7 @@ docs/archive/                历史路线，不得被运行时代码引用
 | 六维模型 | Dimension Model v2.1（ID、语义与内部名同 v2.0，展示文案梗感化） |
 | 七人格坐标 | Archetype Profiles v2.1 |
 | 分类器 | Calibrated Item-Profile Matching v3.0（公式未变，矩阵为 v3.1） |
-| 结果文案 | Result System v2.4（v2.3 文章流文案 + v2.4 海报优化） |
+| 结果文案 | Result System v2.5（v2.5 移除防御性文案） |
 
 ## 目录说明
 

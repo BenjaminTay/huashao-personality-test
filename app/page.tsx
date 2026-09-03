@@ -4,10 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ACTS, QUESTIONS, QUESTION_SET_VERSION } from "../data/questions";
 import { ARCHETYPES } from "../data/archetypes";
 import { DIMENSIONS, DIMENSION_ORDER } from "../data/dimensions";
-import {
-  RESULT_CONTENT,
-  RESULT_DISCLAIMER,
-} from "../data/results";
+import { RESULT_CONTENT } from "../data/results";
 import type { ArchetypeId, OptionId } from "../data/types";
 import { POPULATION_SNAPSHOT } from "../data/population-stats";
 import { calculateResult, getQuestionContribution } from "../lib/scoring";
@@ -615,7 +612,7 @@ function ActScreen({ act, onContinue, onHome }: { act: (typeof ACTS)[number]; on
         {ACT_NOTES[act.act].map((note, index) => <span key={note} style={{ transform: `rotate(${index % 2 ? 2 : -2}deg)` }}>{`“${note}”`}</span>)}
       </div>
       <div className="act-rule"><span /><small>THE GROUP DYNAMIC IS CHANGING</small><span /></div>
-      <button className="primary-action" type="button" onClick={onContinue}><span>继续观察</span><span className="action-arrow">↗</span></button>
+      <button className="primary-action" type="button" onClick={onContinue}><span>{act.act === 1 ? "开演" : "下一幕"}</span><span className="action-arrow">↗</span></button>
     </section>
   );
 }
@@ -728,7 +725,7 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
             );
           })}
         </div>
-        <p className="score-footnote">属性点只反映你这次的选择，不给你下定义——留着跟朋友互相伤害用。</p>
+        <p className="score-footnote">这组属性点，留着跟朋友互相伤害用。</p>
       </section>
 
       <section className="result-section cast-section" aria-label="第二人格与绝缘人格">
@@ -777,7 +774,7 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
               onChange={(event) => setShareName(event.target.value)}
               aria-describedby="share-name-help"
             />
-            <p id="share-name-help">姓名仅用于本地生成，不会上传。</p>
+            <p id="share-name-help">名字只会出现在你保存的图上。</p>
           </div>
           <a
             className="download-action"
@@ -798,7 +795,6 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
               });
             }}
           >分享/保存成图片 <span>↗</span></button>
-          <p className="share-format-note">下载原图，或手机直接存图分享 · 二维码就是本测试入口</p>
         </div>
       </section>
 
@@ -833,14 +829,12 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
                 );
               })}
             </div>
-            <p className="score-footnote">按人次统计 · 只记录主型 · 匿名聚合 · 每日更新</p>
           </>
         ) : (
             <p className="sample-empty">样本还没开张：你是第一位完成鉴定的吗？把档案卡发给朋友，让“测友坐标”长出来。</p>
           )}
       </section>
 
-      <div className="result-disclaimer"><strong>娱乐原型说明</strong><p>{RESULT_DISCLAIMER}</p></div>
       <div className="result-actions"><button className="primary-action" type="button" onClick={onRetake}><span>再测一次</span><span className="action-arrow">↗</span></button><button className="text-action" type="button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>回到结果顶部 ↑</button></div>
     </section>
   );

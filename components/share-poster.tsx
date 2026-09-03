@@ -268,7 +268,7 @@ export function buildSharePosterSvg(
     <path d="${qrModules}" fill="${INK}" shape-rendering="crispEdges"/>
     <text x="903" y="1316" fill="${INK}" font-family="monospace" font-size="13" text-anchor="middle" letter-spacing="1">扫码领取你的花学人格</text>
     <path d="M72 1362H1008" stroke="${palette.accent}" stroke-opacity=".55"/>
-    <text x="72" y="1388" fill="${MUTED}" font-family="monospace" font-size="13" letter-spacing="2">纯娱乐 · 花学考古档案</text>
+    <text x="72" y="1388" fill="${MUTED}" font-family="monospace" font-size="13" letter-spacing="2">花学考古档案</text>
     <text x="1008" y="1388" fill="${palette.accent}" font-family="monospace" font-size="13" text-anchor="end">${escapeXml(archetype.englishName)}</text>
   </svg>`;
 }
@@ -333,7 +333,7 @@ export function SharePoster({ archetype, content, displayScores, testUrl, displa
         </section>
       </div>
       <footer className="share-poster-footer">
-        <span>纯娱乐 · 花学考古档案</span>
+        <span>花学考古档案</span>
         <span>{archetype.englishName}</span>
       </footer>
     </div>

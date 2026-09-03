@@ -30,7 +30,7 @@
 - 六维 ID：R、S、B、D、G、I，以及它们的语义；
 - 七个人格 ID、人格坐标和 `ArchetypeId`；
 - 主型匹配必须使用 `Calibrated Item-Profile Matching v3.0`，不得把旧的简单六维欧氏距离作为最终分类器；
-- 结果中的娱乐原型免责声明，不得删除、弱化成暗示真人事实，或改写成心理诊断结论。
+- 结果中的娱乐原型免责声明（2026-09-03 Result System v2.5 起，经产品负责人显式批准已从 UI 下线，不得擅自恢复；恢复需走同一审批流程。覆盖凭据见 docs/decisions/ResultSystem-v2-梗感改版与QuestionSet-v3.2勘误.md §8）；
 
 如果确实需要改动，先修改对应数据文件和版本号，再让 UI、测试和 README 同步，不要在组件里做临时覆盖。
 
