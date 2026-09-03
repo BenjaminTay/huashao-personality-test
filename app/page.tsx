@@ -13,7 +13,12 @@ import { POPULATION_SNAPSHOT } from "../data/population-stats";
 import { calculateResult } from "../lib/scoring";
 import { trackShareCard, trackTestComplete, trackTestStart } from "../lib/analytics";
 import type { AnswerMap, ComputedResult } from "../types";
-import { buildSharePosterSvg, getTestEntryUrl, SharePoster } from "../components/share-poster";
+import {
+  buildSharePosterSvg,
+  getTestEntryUrl,
+  normalizeShareName,
+  SharePoster,
+} from "../components/share-poster";
 
 type Screen = "home" | "quiz" | "act" | "loading" | "reveal" | "result";
 
@@ -555,10 +560,12 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
     POPULATION_SNAPSHOT.completions[result.primaryType],
     sampleTotal,
   );
+  const [shareName, setShareName] = useState("");
+  const cleanShareName = normalizeShareName(shareName);
   const testUrl = useMemo(() => getTestEntryUrl(), []);
   const shareCardSvg = useMemo(
-    () => buildSharePosterSvg(primary, content, result.sixDimensionProfile, testUrl),
-    [content, primary, result.sixDimensionProfile, testUrl],
+    () => buildSharePosterSvg(primary, content, result.sixDimensionProfile, testUrl, cleanShareName),
+    [cleanShareName, content, primary, result.sixDimensionProfile, testUrl],
   );
   const shareCardHref = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(shareCardSvg)}`;
 
@@ -684,17 +691,33 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
           content={content}
           displayScores={result.sixDimensionProfile}
           testUrl={testUrl}
+          displayName={cleanShareName}
         />
         <div className="share-copy-block">
           <p className="eyebrow"><span className="red-dot" /> SHAREABLE FILE</p>
           <h2 id="share-title">把这张海报带走</h2>
-          <p>独立排版的 3:4 花少人格海报，包含你的称号、暴击、突出维度、心眼子余额和测试二维码。</p>
+          <p>填写姓名后，海报会显示“XXX，你的花少人格是”。</p>
+          <div className="share-personalize">
+            <label htmlFor="share-name"><span>PERSONALIZE / 姓名</span>姓名（可选）</label>
+            <input
+              id="share-name"
+              name="share-name"
+              type="text"
+              value={shareName}
+              maxLength={10}
+              placeholder="请输入姓名"
+              autoComplete="nickname"
+              onChange={(event) => setShareName(event.target.value)}
+              aria-describedby="share-name-help"
+            />
+            <p id="share-name-help">姓名仅用于本地生成，不会上传。</p>
+          </div>
           <a
             className="download-action"
             href={shareCardHref}
             download={`huaxue-share-poster-${result.primaryType}.svg`}
             onClick={() => trackShareCard()}
-          >下载 3:4 海报 <span>↘</span></a>
+          >下载{cleanShareName ? ` ${cleanShareName}的` : "我的"} 3:4 海报 <span>↘</span></a>
           <p className="share-format-note">独立海报布局 · SVG 矢量下载 · 二维码指向当前测试入口</p>
         </div>
       </section>

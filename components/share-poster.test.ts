@@ -11,6 +11,19 @@ describe("share poster", () => {
     expect(getTopDimensionIds(SAMPLE_PROFILE)).toEqual(["B", "R"]);
   });
 
+  it("writes a sanitized name into the share headline", () => {
+    const poster = buildSharePosterSvg(
+      ARCHETYPES.yang,
+      RESULT_CONTENT.yang,
+      SAMPLE_PROFILE,
+      "https://example.com/huaxue/",
+      "  小明\n<测试>  ",
+    );
+
+    expect(poster).toContain("小明&lt;测试&gt;，你的花少人格是");
+    expect(poster).not.toContain("\n&lt;测试&gt;");
+  });
+
   it("generates a complete 3:4 poster for every archetype symbol", () => {
     (Object.keys(ARCHETYPES) as ArchetypeId[]).forEach((id) => {
       const poster = buildSharePosterSvg(

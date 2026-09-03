@@ -473,7 +473,8 @@ button:disabled { cursor: not-allowed; }
 
 .act-screen {
   position: relative;
-  max-width: 960px;
+  max-width: 880px;
+  margin: 0 auto;
   min-height: calc(100svh - 160px);
   border-top: 1px solid var(--line-strong);
   border-bottom: 1px solid var(--line);
@@ -562,7 +563,8 @@ button:disabled { cursor: not-allowed; }
 
 .reveal-screen {
   position: relative;
-  max-width: 960px;
+  max-width: 880px;
+  margin: 0 auto;
   min-height: calc(100svh - 160px);
   padding-left: 4%;
   border-left: 1px solid var(--archive-red);
@@ -1056,6 +1058,43 @@ button:disabled { cursor: not-allowed; }
 .share-poster-qr { display: block; width: 100%; aspect-ratio: 1; }
 .share-poster-qr-wrap p { margin: 5% 0 0; color: var(--ink); font: 600 clamp(7px, 2.45cqw, 10px) var(--font-mono); text-align: center; white-space: nowrap; }
 .share-poster-footer { margin-top: 4%; padding-top: 3%; border-top: 1px solid color-mix(in srgb, var(--poster-accent) 52%, transparent); }
+
+.share-personalize {
+  margin: 0 0 20px;
+  padding: 14px 15px 12px;
+  border-left: 3px solid var(--archive-red);
+  background: rgba(229, 221, 206, .52);
+}
+
+.share-personalize label {
+  display: grid;
+  gap: 7px;
+  color: var(--ink);
+  font: 600 14px/1.4 var(--font-display);
+}
+
+.share-personalize label span {
+  color: var(--archive-red);
+  font: 9px var(--font-mono);
+  letter-spacing: .1em;
+}
+
+.share-personalize input {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 12px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 0;
+  outline: 0;
+  background: rgba(250, 247, 239, .78);
+  color: var(--ink);
+  font: 15px var(--font-body);
+}
+
+.share-personalize input::placeholder { color: #a0a097; }
+.share-personalize input:focus { border-color: var(--archive-red); box-shadow: 3px 3px 0 rgba(182, 76, 62, .16); }
+.share-personalize p { margin: 8px 0 0; color: var(--muted-ink); font-size: 11px; line-height: 1.6; }
 
 @media (max-width: 760px) {
   .share-poster { width: min(100%, 380px); box-shadow: 7px 8px 0 rgba(213, 200, 180, .7); }

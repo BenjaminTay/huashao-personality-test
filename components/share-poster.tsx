@@ -37,6 +37,7 @@ interface SharePosterProps {
   content: PersonalityResultContent;
   displayScores: DimensionVector;
   testUrl: string;
+  displayName?: string;
 }
 
 interface QrMatrix {
@@ -151,13 +152,24 @@ export function getTestEntryUrl(): string {
   return url.toString();
 }
 
+export function normalizeShareName(value: string): string {
+  return value
+    .replace(/[\u0000-\u001f\u007f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 10);
+}
+
 export function buildSharePosterSvg(
   archetype: Archetype,
   content: PersonalityResultContent,
   displayScores: DimensionVector,
   testUrl: string,
+  displayName = "",
 ): string {
   const palette = SYMBOL_PALETTES[archetype.visualSymbol];
+  const cleanName = normalizeShareName(displayName);
+  const personalizedLabel = cleanName ? `${cleanName}，你的花少人格是` : "你的花少人格是";
   const matrix = createQrMatrix(testUrl);
   const qrTotal = 184;
   const qrModule = qrTotal / (matrix.size + 8);
@@ -194,7 +206,7 @@ export function buildSharePosterSvg(
     <text x="72" y="92" fill="${INK}" font-family="monospace" font-size="18" letter-spacing="3">花少人格 / HUAXUE TEST</text>
     <text x="1008" y="92" fill="${MUTED}" font-family="monospace" font-size="16" text-anchor="end" letter-spacing="2">FIELD FILE 02</text>
     <text x="72" y="230" fill="${palette.accent}" font-family="monospace" font-size="17" letter-spacing="4">PERSONALITY ARCHIVE / ${escapeXml(archetype.englishName)}</text>
-    <text x="72" y="332" fill="${INK}" font-family="serif" font-size="55" font-weight="700" letter-spacing="8">花少人格</text>
+    <text x="72" y="332" fill="${INK}" font-family="serif" font-size="45" font-weight="700" letter-spacing="5">${escapeXml(personalizedLabel)}</text>
     <text x="72" y="458" fill="${INK}" font-family="serif" font-size="102" font-weight="700" letter-spacing="-5">${escapeXml(archetype.personName)}</text>
     <text x="72" y="522" fill="${palette.secondary}" font-family="serif" font-size="38" font-weight="700">${escapeXml(archetype.title)}</text>
     ${symbolSvg(archetype.visualSymbol, palette.accent, palette.secondary, 870, 250, 1.32)}
@@ -217,10 +229,12 @@ export function buildSharePosterSvg(
   </svg>`;
 }
 
-export function SharePoster({ archetype, content, displayScores, testUrl }: SharePosterProps) {
+export function SharePoster({ archetype, content, displayScores, testUrl, displayName = "" }: SharePosterProps) {
   const palette = SYMBOL_PALETTES[archetype.visualSymbol];
   const topDimensions = getTopDimensionIds(displayScores);
   const balance = HEART_EYE_BALANCES[archetype.id];
+  const cleanName = normalizeShareName(displayName);
+  const personalizedLabel = cleanName ? `${cleanName}，你的花少人格是` : "你的花少人格是";
   return (
     <div
       className={`share-poster share-poster--${archetype.visualSymbol}`}
@@ -237,7 +251,7 @@ export function SharePoster({ archetype, content, displayScores, testUrl }: Shar
       <div className="share-poster-hero">
         <div>
           <p className="share-poster-kicker">PERSONALITY ARCHIVE / {archetype.englishName}</p>
-          <p className="share-poster-label">花少人格</p>
+          <p className="share-poster-label">{personalizedLabel}</p>
           <h3>{archetype.personName}</h3>
           <p className="share-poster-title">{archetype.title}</p>
         </div>
