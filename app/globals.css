@@ -1447,3 +1447,9 @@ button.download-action {
   .cast-role { font-size: 19px; }
   .cast-card h3 { margin-top: 10px; }
 }
+
+.share-poster-export { align-self: start; width: min(100%, 320px); margin: 0 auto; }
+.share-poster-export-art { transform: rotate(-1deg); }
+.share-poster-export-art svg { display: block; width: 100%; height: auto; background: var(--paper); box-shadow: 8px 9px 0 rgba(213, 200, 180, .7); }
+.share-image-action:disabled { opacity: .55; cursor: wait; }
+@media (max-width: 900px) { .share-poster-export { width: min(100%, 300px); } }

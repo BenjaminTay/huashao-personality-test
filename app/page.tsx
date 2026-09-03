@@ -17,11 +17,11 @@ import {
 import type { AnswerMap, ComputedResult } from "../types";
 import {
   balanceFollowUp,
-  buildSharePosterSvg,
+  buildSharePosterSpec,
   getTestEntryUrl,
   normalizeShareName,
   sharePosterAsImage,
-  SharePoster,
+  svgToPngBlob,
 } from "../components/share-poster";
 import { ResultPreviewBar } from "../components/result-preview-bar";
 
@@ -669,11 +669,51 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
   const [shareName, setShareName] = useState("");
   const cleanShareName = normalizeShareName(shareName);
   const testUrl = useMemo(() => getTestEntryUrl(), []);
-  const shareCardSvg = useMemo(
-    () => buildSharePosterSvg(primary, content, result.sixDimensionProfile, testUrl, cleanShareName, leastLike),
+  const sharePosterSpec = useMemo(
+    () => buildSharePosterSpec(primary, content, result.sixDimensionProfile, testUrl, cleanShareName, leastLike),
     [cleanShareName, content, leastLike, primary, result.sixDimensionProfile, testUrl],
   );
-  const shareCardHref = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(shareCardSvg)}`;
+
+  const [prefersShareOverDownload, setPrefersShareOverDownload] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia?.("(hover: none) and (pointer: coarse)").matches ?? false;
+  });
+  const [posterExporting, setPosterExporting] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(hover: none) and (pointer: coarse)");
+    const update = () => setPrefersShareOverDownload(media.matches);
+    update();
+    media.addEventListener?.("change", update);
+    return () => media.removeEventListener?.("change", update);
+  }, []);
+
+  async function handlePosterAction(): Promise<void> {
+    if (posterExporting) return;
+    setPosterExporting(true);
+    const baseName = `huaxue-share-poster-${result.primaryType}`;
+    try {
+      if (prefersShareOverDownload) {
+        trackShareImage();
+        await sharePosterAsImage(sharePosterSpec, baseName);
+        return;
+      }
+      trackShareCard();
+      const blob = await svgToPngBlob(sharePosterSpec);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${baseName}.png`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 4000);
+    } catch {
+      // 分享被取消或导出失败时静默，不打断结果页
+    } finally {
+      setPosterExporting(false);
+    }
+  }
 
   return (
     <section className="result-screen page-enter" aria-labelledby="result-title">
@@ -749,14 +789,9 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
       </section>
 
       <section className="result-section share-section" aria-labelledby="share-title">
-        <SharePoster
-          archetype={primary}
-          content={content}
-          displayScores={result.sixDimensionProfile}
-          testUrl={testUrl}
-          displayName={cleanShareName}
-          leastLike={leastLike}
-        />
+        <div className="share-poster-export" role="img" aria-label={`${primary.personName} 花学人格分享海报`}>
+          <div className="share-poster-export-art" dangerouslySetInnerHTML={{ __html: sharePosterSpec.svg }} />
+        </div>
         <div className="share-copy-block">
           <p className="eyebrow"><span className="red-dot" /> 分享现场</p>
           <h2 id="share-title">把这张海报带走</h2>
@@ -776,25 +811,15 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
             />
             <p id="share-name-help">名字只会出现在你保存的图上。</p>
           </div>
-          <a
-            className="download-action"
-            href={shareCardHref}
-            download={`huaxue-share-poster-${result.primaryType}.svg`}
-            onClick={() => trackShareCard()}
-          >下载{cleanShareName ? ` ${cleanShareName}的` : "我的"} 3:4 海报 <span>↘</span></a>
           <button
             className="download-action share-image-action"
             type="button"
-            onClick={() => {
-              trackShareImage();
-              void sharePosterAsImage(
-                shareCardSvg,
-                `huaxue-share-poster-${result.primaryType}`,
-              ).catch(() => {
-                // 分享被取消或导出失败时静默：保留 SVG 下载路径
-              });
-            }}
-          >分享/保存成图片 <span>↗</span></button>
+            disabled={posterExporting}
+            onClick={() => void handlePosterAction()}
+          >
+            <span>{prefersShareOverDownload ? "分享/保存成图片" : "下载我的海报"}</span>
+            <span>{prefersShareOverDownload ? "↗" : "↘"}</span>
+          </button>
         </div>
       </section>
 

@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import QRCode from "qrcode";
 import type { Archetype } from "../data/archetypes";
 import { DIMENSIONS, DIMENSION_ORDER } from "../data/dimensions";
@@ -23,15 +22,6 @@ const SYMBOL_PALETTES: Record<VisualSymbol, { accent: string; secondary: string;
   repair: { accent: "#3f6978", secondary: "#b64c3e", wash: "#dfe9e8" },
   tourist: { accent: "#a85b3f", secondary: "#778c68", wash: "#eee7d5" },
 };
-
-interface SharePosterProps {
-  archetype: Archetype;
-  content: PersonalityResultContent;
-  displayScores: DimensionVector;
-  testUrl: string;
-  displayName?: string;
-  leastLike?: Archetype;
-}
 
 interface QrMatrix {
   size: number;
@@ -116,27 +106,6 @@ function symbolSvg(symbol: VisualSymbol, color: string, secondary: string, x: nu
   }
 }
 
-function previewSymbol(symbol: VisualSymbol): React.ReactNode {
-  return (
-    <span className={`share-poster-symbol share-poster-symbol--${symbol}`} aria-hidden="true">
-      <span className="symbol-core" />
-      <span className="symbol-trace" />
-    </span>
-  );
-}
-
-function QrCode({ value }: { value: string }) {
-  const matrix = useMemo(() => createQrMatrix(value), [value]);
-  const modules = matrix.modules.map((row) => row.map((cell) => (cell ? "1" : "0")).join("")).join("");
-  return (
-    <svg className="share-poster-qr" viewBox={`0 0 ${matrix.size + 8} ${matrix.size + 8}`} role="img" aria-label="扫码打开花学测试">
-      <title>扫码打开花学测试</title>
-      <rect width={matrix.size + 8} height={matrix.size + 8} fill={PAPER} />
-      <path d={qrPath(matrix, 4, 4, 1)} fill={INK} shapeRendering="crispEdges" data-modules={modules} />
-    </svg>
-  );
-}
-
 export const PRODUCTION_TEST_URL = "https://huaxue-test.pages.dev/";
 
 export function getTestEntryUrl(): string {
@@ -154,20 +123,44 @@ export function getTestEntryUrl(): string {
   return url.toString();
 }
 
+const SERIF_CANVAS_FONT =
+  '"Noto Serif SC","Source Han Serif SC","Songti SC","STSong","SimSun",serif';
+const MONO_CANVAS_FONT =
+  'ui-monospace,"SF Mono",Menlo,Consolas,"Courier New",monospace';
+
+export type PosterTextRun = {
+  x: number;
+  y: number;
+  size: number;
+  weight: number;
+  fill: string;
+  /** serif = 思源宋体（网页字体），mono = 等宽（系统字体） */
+  family: "serif" | "mono";
+  letterSpacing: number;
+  text: string;
+  anchor?: "middle" | "end";
+};
+
+export interface SharePosterSpec {
+  /** 完整海报 SVG（含文字），用于矢量下载 */
+  svg: string;
+  /** 纯图形底图 SVG（不含文字），用于 PNG 合成 */
+  baseSvg: string;
+  textRuns: PosterTextRun[];
+}
+
 /**
  * 导出前确保海报用到的思源宋体切片已经就绪。
- * 直接放在页面里的 SVG 在 rasterize 时能复用文档已加载的 webfont；
- * 若某些字形的切片尚未下载，document.fonts.load 会按需补齐。
+ * 文字最终由 canvas 在页面上下文里绘制，能复用页面 webfont；
+ * 若某些字形切片尚未下载，document.fonts.load 会按需补齐。
  */
-async function ensurePosterFonts(svg: string): Promise<void> {
+async function ensurePosterFonts(runs: PosterTextRun[]): Promise<void> {
   const fonts = document.fonts;
   if (!fonts?.load) return;
-  const sample = svg
-    .replace(/<[^>]*>/g, " ")
-    .replaceAll("&amp;", "&")
-    .replaceAll("&lt;", "<")
-    .replaceAll("&gt;", ">")
-    .replaceAll("&quot;", '"')
+  const sample = runs
+    .filter((run) => run.family === "serif")
+    .map((run) => run.text)
+    .join("\n")
     .slice(0, 4000);
   const jobs: Promise<unknown>[] = [];
   for (const weight of [400, 700]) {
@@ -178,20 +171,39 @@ async function ensurePosterFonts(svg: string): Promise<void> {
   await Promise.all(jobs);
 }
 
-function isCanvasBlank(context: CanvasRenderingContext2D): boolean {
-  const data = context.getImageData(0, 0, 4, 4).data;
-  return data.every((value) => value === 0);
+/**
+ * 把文字 run 逐个字符绘制到 canvas（文档上下文，webfont 可用）。
+ * 逐字符绘制是为了跨浏览器稳定复刻 SVG 的 letter-spacing（可为负值）。
+ */
+function drawPosterTextRuns(context: CanvasRenderingContext2D, runs: PosterTextRun[]): void {
+  context.textBaseline = "alphabetic";
+  for (const run of runs) {
+    if (!run.text) continue;
+    context.font = `${run.weight} ${run.size}px ${run.family === "serif" ? SERIF_CANVAS_FONT : MONO_CANVAS_FONT}`;
+    context.fillStyle = run.fill;
+
+    let total = 0;
+    for (const char of run.text) {
+      total += context.measureText(char).width;
+    }
+    if (run.text.length > 1) {
+      total += run.letterSpacing * (run.text.length - 1);
+    }
+
+    let cursor = run.x;
+    if (run.anchor === "end") cursor -= total;
+    else if (run.anchor === "middle") cursor -= total / 2;
+
+    for (const char of run.text) {
+      context.fillText(char, cursor, run.y);
+      cursor += context.measureText(char).width + run.letterSpacing;
+    }
+  }
 }
 
-/** 将海报 SVG 渲染为 1080×1440 的 PNG Blob（用于移动端分享/保存）。 */
-export async function svgToPngBlob(svg: string): Promise<Blob> {
-  await ensurePosterFonts(svg);
-
-  const holder = document.createElement("div");
-  holder.style.cssText = "position:fixed;left:-20000px;top:0;";
-  holder.innerHTML = svg;
-  document.body.appendChild(holder);
-  const node = holder.firstElementChild;
+/** 将海报渲染为 1080×1440 的 PNG Blob（用于移动端分享/保存）。 */
+export async function svgToPngBlob(spec: SharePosterSpec): Promise<Blob> {
+  await ensurePosterFonts(spec.textRuns);
 
   const canvas = document.createElement("canvas");
   canvas.width = 1080;
@@ -199,33 +211,12 @@ export async function svgToPngBlob(svg: string): Promise<Blob> {
   const context = canvas.getContext("2d");
   if (!context) throw new Error("无法创建画布上下文");
 
-  try {
-    if (node instanceof SVGSVGElement) {
-      context.drawImage(
-        node as unknown as CanvasImageSource,
-        0,
-        0,
-        canvas.width,
-        canvas.height,
-      );
-      if (!isCanvasBlank(context)) {
-        const blob = await new Promise<Blob | null>((resolve) => {
-          canvas.toBlob(resolve, "image/png");
-        });
-        if (blob) return blob;
-      }
-    }
-  } catch {
-    // 不支持直接绘制 SVG 节点时，回退到 <img> 隔离渲染
-  } finally {
-    holder.remove();
-  }
-
   const image = new Image();
-  image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(spec.baseSvg)}`;
   await image.decode();
-  context.clearRect(0, 0, canvas.width, canvas.height);
-  context.drawImage(image, 0, 0);
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  drawPosterTextRuns(context, spec.textRuns);
+
   const blob = await new Promise<Blob | null>((resolve) => {
     canvas.toBlob(resolve, "image/png");
   });
@@ -234,8 +225,8 @@ export async function svgToPngBlob(svg: string): Promise<Blob> {
 }
 
 /** 移动端主路径：优先 Web Share 直接分享 PNG；不可用时在新标签打开 PNG 供长按保存。 */
-export async function sharePosterAsImage(svg: string, fileName: string): Promise<void> {
-  const pngBlob = await svgToPngBlob(svg);
+export async function sharePosterAsImage(spec: SharePosterSpec, fileName: string): Promise<void> {
+  const pngBlob = await svgToPngBlob(spec);
   const file = new File([pngBlob], `${fileName}.png`, { type: "image/png" });
   if (navigator.canShare?.({ files: [file] })) {
     await navigator.share({ files: [file] });
@@ -262,14 +253,33 @@ export function balanceFollowUp(value: string): string {
   return index >= 0 ? value.slice(index + 1).trim() : value;
 }
 
-export function buildSharePosterSvg(
+function posterTextTag(run: PosterTextRun): string {
+  const attrs = [
+    `x="${run.x}"`,
+    `y="${run.y}"`,
+    `fill="${run.fill}"`,
+    `font-family="${run.family === "serif" ? SERIF_STACK : "monospace"}"`,
+    `font-size="${run.size}"`,
+  ];
+  if (run.weight !== 400) attrs.push(`font-weight="${run.weight}"`);
+  if (run.letterSpacing !== 0) attrs.push(`letter-spacing="${run.letterSpacing}"`);
+  if (run.anchor) attrs.push(`text-anchor="${run.anchor}"`);
+  return `<text ${attrs.join(" ")}>${escapeXml(run.text)}</text>`;
+}
+
+/**
+ * 生成海报的全部素材：完整 SVG（矢量下载用）与纯图形底图 SVG +
+ * 文字 run（PNG 导出用，文字由 canvas 用页面 webfont 绘制）。
+ * 形状与文字按同一份 1080×1440 坐标生成，避免两份设计漂移。
+ */
+export function buildSharePosterSpec(
   archetype: Archetype,
   content: PersonalityResultContent,
   displayScores: DimensionVector,
   testUrl: string,
   displayName = "",
   leastLike?: Archetype,
-): string {
+): SharePosterSpec {
   const palette = SYMBOL_PALETTES[archetype.visualSymbol];
   const cleanName = normalizeShareName(displayName);
   const personalizedLabel = cleanName ? `${cleanName}，你的花少人格是` : "你的花少人格是";
@@ -283,122 +293,95 @@ export function buildSharePosterSvg(
   const qrX = 824;
   const qrY = 1134;
   const noteStart = 664 + quoteLines.length * 38 + 26;
-  const dimensionMarkup = topDimensions.map((dimension, index) => {
+  const qrModules = qrPath(matrix, qrX + qrModule * 4, qrY + qrModule * 4, qrModule);
+
+  const svgParts: string[] = [];
+  const baseParts: string[] = [];
+  const textRuns: PosterTextRun[] = [];
+
+  const shape = (markup: string) => {
+    svgParts.push(markup);
+    baseParts.push(markup);
+  };
+  const text = (run: PosterTextRun) => {
+    svgParts.push(posterTextTag(run));
+    textRuns.push(run);
+  };
+
+  svgParts.push(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1440" viewBox="0 0 1080 1440">`,
+  );
+  baseParts.push(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1440" viewBox="0 0 1080 1440">`,
+  );
+  shape(
+    `<defs><pattern id="paper-grid" width="72" height="72" patternUnits="userSpaceOnUse"><path d="M72 0H0V72" fill="none" stroke="${palette.accent}" stroke-opacity=".035"/></pattern></defs>`,
+  );
+  shape(`<rect width="1080" height="1440" fill="${PAPER}"/>`);
+  shape(`<rect width="1080" height="1440" fill="url(#paper-grid)"/>`);
+  shape(`<rect x="36" y="36" width="1008" height="1368" fill="none" stroke="${palette.accent}" stroke-width="2" stroke-opacity=".55"/>`);
+  shape(`<path d="M72 132H1008" stroke="${INK}" stroke-opacity=".22"/>`);
+
+  text({ x: 72, y: 92, size: 18, weight: 400, fill: INK, family: "mono", letterSpacing: 3, text: "花少人格 / HUAXUE TEST" });
+  text({ x: 1008, y: 92, size: 16, weight: 400, fill: MUTED, family: "mono", letterSpacing: 2, text: "FIELD FILE 02", anchor: "end" });
+  text({ x: 72, y: 230, size: 17, weight: 400, fill: palette.accent, family: "mono", letterSpacing: 4, text: `PERSONALITY ARCHIVE / ${archetype.englishName}` });
+  text({ x: 72, y: 332, size: 45, weight: 700, fill: INK, family: "serif", letterSpacing: 5, text: personalizedLabel });
+  text({ x: 72, y: 458, size: 102, weight: 700, fill: INK, family: "serif", letterSpacing: -5, text: archetype.personName });
+  text({ x: 72, y: 522, size: 38, weight: 700, fill: palette.secondary, family: "serif", letterSpacing: 0, text: archetype.title });
+
+  shape(symbolSvg(archetype.visualSymbol, palette.accent, palette.secondary, 870, 250, 1.32));
+  shape(`<rect x="72" y="566" width="936" height="252" fill="${palette.wash}" stroke="${palette.accent}" stroke-opacity=".26"/>`);
+  text({ x: 102, y: 606, size: 15, weight: 400, fill: palette.accent, family: "mono", letterSpacing: 3, text: "名场面 / ORIGINAL LINE" });
+  quoteLines.forEach((line, index) => {
+    text({ x: 102, y: 664 + index * 38, size: 36, weight: 700, fill: INK, family: "serif", letterSpacing: 0, text: line });
+  });
+  noteLines.forEach((line, index) => {
+    text({ x: 102, y: noteStart + index * 26, size: 14, weight: 400, fill: MUTED, family: "serif", letterSpacing: 0, text: line });
+  });
+  text({ x: 72, y: 874, size: 15, weight: 400, fill: palette.accent, family: "mono", letterSpacing: 3, text: "TOP 02 / 两个最突出维度" });
+
+  topDimensions.forEach((dimension, index) => {
     const definition = DIMENSIONS[dimension];
     const score = displayScores[dimension];
     const x = index === 0 ? 72 : 548;
     const barWidth = 340;
-    return `<g>
-      <text x="${x}" y="922" fill="${MUTED}" font-family="monospace" font-size="16" letter-spacing="2">${escapeXml(definition.displayName)}</text>
-      <text x="${x + 410}" y="922" fill="${palette.accent}" font-family="monospace" font-size="24" text-anchor="end">${score}</text>
-      <rect x="${x}" y="944" width="${barWidth}" height="10" fill="${PAPER_DEEP}"/>
-      <rect x="${x}" y="944" width="${Math.max(8, barWidth * score / 100)}" height="10" fill="${palette.secondary}"/>
-      <text x="${x}" y="980" fill="${MUTED}" font-family="${SERIF_STACK}" font-size="14">${escapeXml(score >= 50 ? definition.highLabel : definition.lowLabel)}</text>
-    </g>`;
-  }).join("");
-  const qrModules = qrPath(matrix, qrX + qrModule * 4, qrY + qrModule * 4, qrModule);
+    text({ x, y: 922, size: 16, weight: 400, fill: MUTED, family: "mono", letterSpacing: 2, text: definition.displayName });
+    text({ x: x + 410, y: 922, size: 24, weight: 400, fill: palette.accent, family: "mono", letterSpacing: 0, text: String(score), anchor: "end" });
+    shape(`<rect x="${x}" y="944" width="${barWidth}" height="10" fill="${PAPER_DEEP}"/>`);
+    shape(`<rect x="${x}" y="944" width="${Math.max(8, barWidth * score / 100)}" height="10" fill="${palette.secondary}"/>`);
+    text({ x, y: 980, size: 14, weight: 400, fill: MUTED, family: "serif", letterSpacing: 0, text: score >= 50 ? definition.highLabel : definition.lowLabel });
+  });
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1440" viewBox="0 0 1080 1440">
-    <defs>
-      <pattern id="paper-grid" width="72" height="72" patternUnits="userSpaceOnUse">
-        <path d="M72 0H0V72" fill="none" stroke="${palette.accent}" stroke-opacity=".035"/>
-      </pattern>
-    </defs>
-    <rect width="1080" height="1440" fill="${PAPER}"/>
-    <rect width="1080" height="1440" fill="url(#paper-grid)"/>
-    <rect x="36" y="36" width="1008" height="1368" fill="none" stroke="${palette.accent}" stroke-width="2" stroke-opacity=".55"/>
-    <path d="M72 132H1008" stroke="${INK}" stroke-opacity=".22"/>
-    <text x="72" y="92" fill="${INK}" font-family="monospace" font-size="18" letter-spacing="3">花少人格 / HUAXUE TEST</text>
-    <text x="1008" y="92" fill="${MUTED}" font-family="monospace" font-size="16" text-anchor="end" letter-spacing="2">FIELD FILE 02</text>
-    <text x="72" y="230" fill="${palette.accent}" font-family="monospace" font-size="17" letter-spacing="4">PERSONALITY ARCHIVE / ${escapeXml(archetype.englishName)}</text>
-    <text x="72" y="332" fill="${INK}" font-family="${SERIF_STACK}" font-size="45" font-weight="700" letter-spacing="5">${escapeXml(personalizedLabel)}</text>
-    <text x="72" y="458" fill="${INK}" font-family="${SERIF_STACK}" font-size="102" font-weight="700" letter-spacing="-5">${escapeXml(archetype.personName)}</text>
-    <text x="72" y="522" fill="${palette.secondary}" font-family="${SERIF_STACK}" font-size="38" font-weight="700">${escapeXml(archetype.title)}</text>
-    ${symbolSvg(archetype.visualSymbol, palette.accent, palette.secondary, 870, 250, 1.32)}
-    <rect x="72" y="566" width="936" height="252" fill="${palette.wash}" stroke="${palette.accent}" stroke-opacity=".26"/>
-    <text x="102" y="606" fill="${palette.accent}" font-family="monospace" font-size="15" letter-spacing="3">名场面 / ORIGINAL LINE</text>
-    ${quoteLines.map((line, index) => `<text x="102" y="${664 + index * 38}" fill="${INK}" font-family="${SERIF_STACK}" font-size="36" font-weight="700">${escapeXml(line)}</text>`).join("")}
-    ${noteLines.map((line, index) => `<text x="102" y="${noteStart + index * 26}" fill="${MUTED}" font-family="${SERIF_STACK}" font-size="14">${escapeXml(line)}</text>`).join("")}
-    <text x="72" y="874" fill="${palette.accent}" font-family="monospace" font-size="15" letter-spacing="3">TOP 02 / 两个最突出维度</text>
-    ${dimensionMarkup}
-    <path d="M72 1030H1008" stroke="${INK}" stroke-opacity=".22"/>
-    <text x="72" y="1078" fill="${palette.accent}" font-family="monospace" font-size="15" letter-spacing="3">心眼子余额 / HEART-EYE BALANCE</text>
-    <text x="72" y="1156" fill="${INK}" font-family="${SERIF_STACK}" font-size="58" font-weight="700">${escapeXml(content.heartEyeBalance)}</text>
-    ${heartCopyLines.map((line, index) => `<text x="72" y="${1204 + index * 30}" fill="${MUTED}" font-family="${SERIF_STACK}" font-size="20">${escapeXml(line)}</text>`).join("")}
-    ${leastLike ? `<text x="72" y="1278" fill="${palette.accent}" font-family="monospace" font-size="15" letter-spacing="2">你的绝缘人格：${escapeXml(leastLike.personName)}</text>` : ""}
-    <rect x="798" y="1086" width="210" height="252" fill="${PAPER_DEEP}" stroke="${INK}" stroke-opacity=".18"/>
-    <rect x="824" y="1134" width="${qrTotal}" height="${qrTotal}" fill="${PAPER}"/>
-    <path d="${qrModules}" fill="${INK}" shape-rendering="crispEdges"/>
-    <text x="903" y="1316" fill="${INK}" font-family="monospace" font-size="13" text-anchor="middle" letter-spacing="1">扫码领取你的花学人格</text>
-    <path d="M72 1362H1008" stroke="${palette.accent}" stroke-opacity=".55"/>
-    <text x="72" y="1388" fill="${MUTED}" font-family="monospace" font-size="13" letter-spacing="2">花学考古档案</text>
-    <text x="1008" y="1388" fill="${palette.accent}" font-family="monospace" font-size="13" text-anchor="end">${escapeXml(archetype.englishName)}</text>
-  </svg>`;
+  shape(`<path d="M72 1030H1008" stroke="${INK}" stroke-opacity=".22"/>`);
+  text({ x: 72, y: 1078, size: 15, weight: 400, fill: palette.accent, family: "mono", letterSpacing: 3, text: "心眼子余额 / HEART-EYE BALANCE" });
+  text({ x: 72, y: 1156, size: 58, weight: 700, fill: INK, family: "serif", letterSpacing: 0, text: content.heartEyeBalance });
+  heartCopyLines.forEach((line, index) => {
+    text({ x: 72, y: 1204 + index * 30, size: 20, weight: 400, fill: MUTED, family: "serif", letterSpacing: 0, text: line });
+  });
+  if (leastLike) {
+    text({ x: 72, y: 1278, size: 15, weight: 400, fill: palette.accent, family: "mono", letterSpacing: 2, text: `你的绝缘人格：${leastLike.personName}` });
+  }
+  shape(`<rect x="798" y="1086" width="210" height="252" fill="${PAPER_DEEP}" stroke="${INK}" stroke-opacity=".18"/>`);
+  shape(`<rect x="${qrX}" y="${qrY}" width="${qrTotal}" height="${qrTotal}" fill="${PAPER}"/>`);
+  shape(`<path d="${qrModules}" fill="${INK}" shape-rendering="crispEdges"/>`);
+  text({ x: 903, y: 1316, size: 13, weight: 400, fill: INK, family: "mono", letterSpacing: 1, text: "扫码领取你的花学人格", anchor: "middle" });
+  shape(`<path d="M72 1362H1008" stroke="${palette.accent}" stroke-opacity=".55"/>`);
+  text({ x: 72, y: 1388, size: 13, weight: 400, fill: MUTED, family: "mono", letterSpacing: 2, text: "花学考古档案" });
+  text({ x: 1008, y: 1388, size: 13, weight: 400, fill: palette.accent, family: "mono", letterSpacing: 0, text: archetype.englishName, anchor: "end" });
+
+  svgParts.push("</svg>");
+  baseParts.push("</svg>");
+  return { svg: svgParts.join(""), baseSvg: baseParts.join(""), textRuns };
 }
 
-export function SharePoster({ archetype, content, displayScores, testUrl, displayName = "", leastLike }: SharePosterProps) {
-  const palette = SYMBOL_PALETTES[archetype.visualSymbol];
-  const topDimensions = getTopDimensionIds(displayScores);
-  const cleanName = normalizeShareName(displayName);
-  const personalizedLabel = cleanName ? `${cleanName}，你的花少人格是` : "你的花少人格是";
-  return (
-    <div
-      className={`share-poster share-poster--${archetype.visualSymbol}`}
-      style={{ "--poster-accent": palette.accent, "--poster-secondary": palette.secondary, "--poster-wash": palette.wash } as React.CSSProperties}
-      role="img"
-      aria-label={`${archetype.personName} 3:4 花少人格分享海报`}
-    >
-      <div className="share-poster-grain" aria-hidden="true" />
-      <header className="share-poster-header">
-        <span>花少人格 / HUAXUE TEST</span>
-        <span>FIELD FILE 02</span>
-      </header>
-      <div className="share-poster-rule" aria-hidden="true" />
-      <div className="share-poster-hero">
-        <div>
-          <p className="share-poster-kicker">PERSONALITY ARCHIVE / {archetype.englishName}</p>
-          <p className="share-poster-label">{personalizedLabel}</p>
-          <h3>{archetype.personName}</h3>
-          <p className="share-poster-title">{archetype.title}</p>
-        </div>
-        {previewSymbol(archetype.visualSymbol)}
-      </div>
-      <section className="share-poster-punch">
-        <p className="share-poster-section-label">名场面 / ORIGINAL LINE</p>
-        <p className="share-poster-quote">“{content.recall.quote}”</p>
-        <p className="share-poster-quote-note">{content.recall.note}</p>
-      </section>
-      <section className="share-poster-dimensions" aria-label="两个最突出维度">
-        <p className="share-poster-section-label">TOP 02 / 两个最突出维度</p>
-        <div className="share-poster-dimension-grid">
-          {topDimensions.map((dimension) => {
-            const definition = DIMENSIONS[dimension];
-            const score = displayScores[dimension];
-            return (
-              <div className="share-poster-dimension" key={dimension}>
-                <div><span>{definition.displayName}</span><strong>{score}</strong></div>
-                <span className="share-poster-mini-bar"><i style={{ width: `${score}%` }} /></span>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-      <div className="share-poster-bottom">
-        <section className="share-poster-heart">
-          <p className="share-poster-section-label">心眼子余额 / HEART-EYE</p>
-          <strong>{content.heartEyeBalance}</strong>
-          <p className="share-poster-heart-copy">{balanceFollowUp(content.heartschemes)}</p>
-          {leastLike && <p className="share-poster-insulate">你的绝缘人格：{leastLike.personName}</p>}
-        </section>
-        <section className="share-poster-qr-wrap">
-          <QrCode value={testUrl} />
-          <p>扫码领取你的花学人格</p>
-        </section>
-      </div>
-      <footer className="share-poster-footer">
-        <span>花学考古档案</span>
-        <span>{archetype.englishName}</span>
-      </footer>
-    </div>
-  );
+export function buildSharePosterSvg(
+  archetype: Archetype,
+  content: PersonalityResultContent,
+  displayScores: DimensionVector,
+  testUrl: string,
+  displayName = "",
+  leastLike?: Archetype,
+): string {
+  return buildSharePosterSpec(archetype, content, displayScores, testUrl, displayName, leastLike).svg;
 }
+
