@@ -14,7 +14,10 @@ import {
   trackTestComplete,
   trackTestStart,
 } from "../lib/analytics";
-import type { AnswerMap, ComputedResult } from "../types";
+import type {
+  QuizAnswers as AnswerMap,
+  QuizResult as ComputedResult,
+} from "../data/types";
 import {
   balanceFollowUp,
   buildSharePosterSpec,
