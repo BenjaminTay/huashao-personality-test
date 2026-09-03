@@ -1,60 +1,33 @@
-import {
-  ARCHETYPES,
-  type Archetype,
-  type ArchetypeId,
-} from "../data/archetypes";
-import {
-  DIMENSION_ORDER,
-  type Dimension,
-} from "../data/dimensions";
-import {
-  QUESTIONS,
-  type OptionId,
-  type Question,
-} from "../data/questions";
+import { ARCHETYPES } from "../data/archetypes";
+import { DIMENSION_ORDER } from "../data/dimensions";
+import { QUESTION_SCORING_V3 } from "../data/question-scoring.v3";
+import { QUESTIONS, type Question } from "../data/questions";
 import type {
-  AnswerMap,
-  ComputedResult,
-  DimensionScores,
+  ArchetypeId,
+  DimensionId,
+  DimensionVector,
   EvidenceItem,
-  MatchResult,
-  QuestionSetValidation,
-} from "../types";
+  OptionId,
+  QuizAnswers,
+  QuizResult,
+} from "../data/types";
 
-export const SCORING_VERSION = "2.0";
+export const SCORING_VERSION = "3.0";
 export const SCORE_MIN = 1;
 export const SCORE_MAX = 5;
 export const DISPLAY_SCORE_MIN = 0;
 export const DISPLAY_SCORE_MAX = 100;
-export const NEAR_TIE_THRESHOLD = 0.35;
 
-type DimensionVector = Record<Dimension, number>;
+const OPTION_IDS: OptionId[] = ["A", "B", "C", "D"];
+const ARCHETYPE_IDS = Object.keys(ARCHETYPES) as ArchetypeId[];
 
-interface EvaluatedProfile {
-  id: ArchetypeId;
-  rawContribution: number;
-  calibratedScore: number;
-  itemContributions: Record<number, number>;
+function mean(values: number[]): number {
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
-interface RankedProfile {
-  id: ArchetypeId;
-  score: number;
-}
-
-function createDimensionVector(value = 0): DimensionVector {
-  return {
-    R: value,
-    S: value,
-    B: value,
-    D: value,
-    G: value,
-    I: value,
-  };
-}
-
-function questionWeight(question: Question): number {
-  return question.weight ?? 1;
+function populationSd(values: number[]): number {
+  const average = mean(values);
+  return Math.sqrt(mean(values.map((value) => (value - average) ** 2)));
 }
 
 function round(value: number, digits = 3): number {
@@ -62,16 +35,12 @@ function round(value: number, digits = 3): number {
   return Math.round(value * factor) / factor;
 }
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
-
 function isOptionId(value: unknown): value is OptionId {
-  return value === "A" || value === "B" || value === "C" || value === "D";
+  return OPTION_IDS.includes(value as OptionId);
 }
 
-function getOption(question: Question, optionId: OptionId) {
-  return question.options.find((option) => option.id === optionId);
+function createDimensionVector(value = 0): DimensionVector {
+  return { R: value, S: value, B: value, D: value, G: value, I: value };
 }
 
 function assertQuestionSet(questions: readonly Question[]): void {
@@ -81,426 +50,235 @@ function assertQuestionSet(questions: readonly Question[]): void {
   }
 }
 
-function assertAnswerValue(question: Question, answers: AnswerMap): OptionId | undefined {
-  const value = answers[question.id];
-  if (value === undefined) {
-    return undefined;
+function assertAnswersBelongToQuestionSet(
+  answers: QuizAnswers,
+  questions: readonly Question[],
+): void {
+  const knownIds = new Set(questions.map((question) => question.id));
+  for (const [questionId, optionId] of Object.entries(answers)) {
+    if (!knownIds.has(questionId)) {
+      throw new Error(`答案包含未知题目：${questionId}`);
+    }
+    if (!isOptionId(optionId)) {
+      throw new Error(`${questionId} 的答案不是合法选项：${String(optionId)}`);
+    }
   }
-  if (!isOptionId(value) || !getOption(question, value)) {
-    throw new Error("Q" + question.id + " 的答案不是合法选项：" + String(value));
-  }
-  return value;
 }
 
 function assertCompleteAnswers(
-  answers: AnswerMap,
+  answers: QuizAnswers,
   questions: readonly Question[],
 ): void {
-  const missing: number[] = [];
-  for (const question of questions) {
-    if (assertAnswerValue(question, answers) === undefined) {
-      missing.push(question.id);
-    }
-  }
+  assertAnswersBelongToQuestionSet(answers, questions);
+  const missing = questions
+    .filter((question) => answers[question.id] === undefined)
+    .map((question) => question.id);
   if (missing.length > 0) {
-    throw new Error(
-      "正式分类需要完成全部题目，缺少：" +
-        missing.map((id) => "Q" + id).join(", "),
-    );
+    throw new Error(`正式分类需要完成全部题目，缺少：${missing.join(", ")}`);
   }
 }
 
-/**
- * 检查题目、选项、维度和评分是否满足开发基线。
- */
+function selectedOptionId(
+  answers: QuizAnswers,
+  question: Question,
+): OptionId {
+  const optionId = answers[question.id];
+  if (!isOptionId(optionId)) {
+    throw new Error(`${question.id} 的答案不是合法选项：${String(optionId)}`);
+  }
+  if (!question.options.some((option) => option.id === optionId)) {
+    throw new Error(`${question.id} 缺少选项 ${optionId}`);
+  }
+  return optionId;
+}
+
+/** 校验 V3 题目、24×4 评分矩阵与六维覆盖。 */
 export function validateQuestionSet(
   questions: readonly Question[] = QUESTIONS,
-): QuestionSetValidation {
+): { questionCount: number; optionCount: number; dimensionCoverage: DimensionVector; errors: string[] } {
   const errors: string[] = [];
-  const ids = new Set<number>();
-  const optionIds = new Set<string>();
   const dimensionCoverage = createDimensionVector();
+  const questionIds = new Set<string>();
   let optionCount = 0;
 
   for (const question of questions) {
-    if (ids.has(question.id)) {
-      errors.push("重复题目 ID Q" + question.id);
-    }
-    ids.add(question.id);
+    if (questionIds.has(question.id)) errors.push(`重复题目 ID ${question.id}`);
+    questionIds.add(question.id);
 
-    if (question.dimensions.length !== 2) {
-      errors.push("Q" + question.id + " 必须恰好测量两个维度");
-    }
-    if (question.weight !== undefined && question.weight <= 0) {
-      errors.push("Q" + question.id + " 的权重必须大于 0");
-    }
-
-    for (const dimension of question.dimensions) {
-      if (!DIMENSION_ORDER.includes(dimension)) {
-        errors.push("Q" + question.id + " 使用了未知维度 " + dimension);
-      } else {
-        dimensionCoverage[dimension] += questionWeight(question);
-      }
-    }
-
-    if (question.options.length !== 4) {
-      errors.push("Q" + question.id + " 必须有 4 个选项");
-    }
-
-    for (const option of question.options) {
-      optionCount += 1;
-      const optionKey = question.id + ":" + option.id;
-      if (optionIds.has(optionKey)) {
-        errors.push("重复选项 " + optionKey);
-      }
-      optionIds.add(optionKey);
-
-      const scoreKeys = Object.keys(option.scores) as Dimension[];
-      if (scoreKeys.length !== 2) {
-        errors.push("Q" + question.id + option.id + " 必须有两个维度评分");
-      }
-      for (const dimension of scoreKeys) {
-        if (!question.dimensions.includes(dimension)) {
-          errors.push(
-            "Q" + question.id + option.id + " 的评分维度 " + dimension + " 不在题目维度内",
-          );
-        }
-        const score = option.scores[dimension];
-        if (
-          typeof score !== "number" ||
-          !Number.isFinite(score) ||
-          score < SCORE_MIN ||
-          score > SCORE_MAX
-        ) {
-          errors.push("Q" + question.id + option.id + " 的 " + dimension + " 分数必须在 1–5");
-        }
-      }
-      for (const dimension of question.dimensions) {
-        if (typeof option.scores[dimension] !== "number") {
-          errors.push("Q" + question.id + option.id + " 缺少 " + dimension + " 评分");
-        }
-      }
-    }
-  }
-
-  return {
-    questionCount: questions.length,
-    optionCount,
-    dimensionCoverage,
-    errors,
-  };
-}
-
-/**
- * 六维展示分：逐维度做加权平均，原始位置 1–5 再映射为 0–100。
- *
- * allowPartial=true 适合答题过程中的临时面板；未观测维度会暂用中点 3/50，
- * 正式结果仍应使用默认的完整答题模式。
- */
-export function calculateDimensionScores(
-  answers: AnswerMap,
-  questions: readonly Question[] = QUESTIONS,
-  options: { allowPartial?: boolean } = {},
-): DimensionScores {
-  assertQuestionSet(questions);
-  const allowPartial = options.allowPartial ?? false;
-  const raw = createDimensionVector();
-  const totalWeight = createDimensionVector();
-  const observedQuestions = createDimensionVector();
-  const missing: number[] = [];
-
-  for (const question of questions) {
-    const optionId = assertAnswerValue(question, answers);
-    if (optionId === undefined) {
-      missing.push(question.id);
+    const scoring = QUESTION_SCORING_V3[question.id];
+    if (!scoring) {
+      errors.push(`${question.id} 缺少 V3 评分矩阵`);
       continue;
     }
-    const option = getOption(question, optionId);
-    if (!option) {
-      throw new Error("Q" + question.id + " 缺少选项 " + optionId);
+    if (question.dimensions.length !== 2) errors.push(`${question.id} 必须恰好测量两个维度`);
+    if (question.dimensions.join(",") !== scoring.dimensions.join(",")) {
+      errors.push(`${question.id} 的题目维度与 V3 矩阵不一致`);
     }
-    const weight = questionWeight(question);
-    for (const dimension of question.dimensions) {
-      raw[dimension] += (option.scores[dimension] ?? 3) * weight;
-      totalWeight[dimension] += weight;
-      observedQuestions[dimension] += 1;
+    for (const dimension of question.dimensions) dimensionCoverage[dimension] += 1;
+
+    if (question.options.length !== 4) errors.push(`${question.id} 必须有 4 个选项`);
+    const optionIds = new Set<OptionId>();
+    for (const option of question.options) {
+      optionCount += 1;
+      if (optionIds.has(option.id)) errors.push(`重复选项 ${question.id}/${option.id}`);
+      optionIds.add(option.id);
+      for (const dimension of question.dimensions) {
+        const score = scoring.options[option.id][dimension];
+        if (typeof score !== "number" || score < SCORE_MIN || score > SCORE_MAX) {
+          errors.push(`${question.id}/${option.id} 的 ${dimension} 分数必须在 1–5`);
+        }
+      }
+    }
+    if (OPTION_IDS.some((optionId) => !optionIds.has(optionId))) {
+      errors.push(`${question.id} 必须包含 A/B/C/D 四个选项`);
     }
   }
 
-  if (!allowPartial && missing.length > 0) {
-    throw new Error(
-      "六维正式分数需要完成全部题目，缺少：" +
-        missing.map((id) => "Q" + id).join(", "),
-    );
-  }
-
-  const rawScores = createDimensionVector();
-  const display = createDimensionVector();
   for (const dimension of DIMENSION_ORDER) {
-    rawScores[dimension] =
-      totalWeight[dimension] > 0 ? raw[dimension] / totalWeight[dimension] : 3;
-    if (totalWeight[dimension] === 0) {
-      rawScores[dimension] = 3;
-    }
-    display[dimension] = Math.round(
-      clamp(
-        ((rawScores[dimension] - SCORE_MIN) / (SCORE_MAX - SCORE_MIN)) * 100,
-        DISPLAY_SCORE_MIN,
-        DISPLAY_SCORE_MAX,
-      ),
-    );
+    if (dimensionCoverage[dimension] === 0) errors.push(`${dimension} 没有题目覆盖`);
   }
+  if (questions.length !== 24) errors.push(`题目数量应为 24，当前为 ${questions.length}`);
 
-  return {
-    raw: rawScores,
-    display,
-    observedQuestions,
-    isComplete: missing.length === 0,
-  };
+  return { questionCount: questions.length, optionCount, dimensionCoverage, errors };
 }
 
-function calculateDimensionBalanceWeights(
-  questions: readonly Question[],
-): DimensionVector {
-  const coverage = createDimensionVector();
-  for (const question of questions) {
-    const weight = questionWeight(question);
-    for (const dimension of question.dimensions) {
-      coverage[dimension] += weight;
-    }
-  }
-
-  const weights = createDimensionVector();
-  for (const dimension of DIMENSION_ORDER) {
-    weights[dimension] = coverage[dimension] > 0 ? 1 / coverage[dimension] : 0;
-  }
-  return weights;
-}
-
-function itemDistanceSquared(
-  archetype: Archetype,
-  question: Question,
+function squaredDistanceForQuestion(
+  archetypeId: ArchetypeId,
+  questionId: string,
   optionId: OptionId,
-  balanceWeights: DimensionVector,
 ): number {
-  const option = getOption(question, optionId);
-  if (!option) {
-    throw new Error("Q" + question.id + " 缺少选项 " + optionId);
-  }
+  const question = QUESTION_SCORING_V3[questionId];
+  const archetype = ARCHETYPES[archetypeId];
+  if (!question) throw new Error(`不存在题目 ${questionId}`);
+  if (!archetype) throw new Error(`不存在人格 ${archetypeId}`);
+  const optionVector = question.options[optionId];
   return question.dimensions.reduce((sum, dimension) => {
-    const observed = option.scores[dimension];
-    if (typeof observed !== "number") {
-      throw new Error("Q" + question.id + optionId + " 缺少 " + dimension + " 评分");
-    }
-    const delta = observed - archetype.coordinates[dimension];
-    return sum + balanceWeights[dimension] * delta * delta;
+    const optionValue = optionVector[dimension];
+    if (optionValue == null) throw new Error(`缺少 ${dimension} 评分：${questionId}/${optionId}`);
+    return sum + (optionValue - archetype.coordinates[dimension]) ** 2;
   }, 0);
 }
 
-/**
- * 对一个人格计算 Item-Profile Matching 的题目贡献。
- *
- * 每题先用四个选项的平均距离做基线：
- *   contribution = questionWeight × (meanDistance - selectedDistance)
- *
- * 因此，某选项比该题平均选项更像该人格时贡献为正，更不像时贡献为负。
- * 再用均匀随机选项下的理论标准差做 z 校准，消除原型几何空间的天然偏置。
- */
-function evaluateProfile(
-  answers: AnswerMap,
-  archetype: Archetype,
-  questions: readonly Question[],
-  balanceWeights: DimensionVector,
-): EvaluatedProfile {
-  let rawContribution = 0;
-  let variance = 0;
-  const itemContributions: Record<number, number> = {};
-
-  for (const question of questions) {
-    const selectedId = assertAnswerValue(question, answers);
-    if (selectedId === undefined) {
-      throw new Error("Q" + question.id + " 缺少答案");
-    }
-    const optionDistances = question.options.map((option) =>
-      itemDistanceSquared(archetype, question, option.id, balanceWeights),
-    );
-    const meanDistance =
-      optionDistances.reduce((sum, distance) => sum + distance, 0) /
-      optionDistances.length;
-    const selectedDistance = itemDistanceSquared(
-      archetype,
-      question,
-      selectedId,
-      balanceWeights,
-    );
-    const contribution = questionWeight(question) * (meanDistance - selectedDistance);
-    rawContribution += contribution;
-    itemContributions[question.id] = contribution;
-
-    const randomContributions = optionDistances.map(
-      (distance) => questionWeight(question) * (meanDistance - distance),
-    );
-    const itemVariance =
-      randomContributions.reduce(
-        (sum, randomContribution) => sum + randomContribution * randomContribution,
-        0,
-      ) / randomContributions.length;
-    variance += itemVariance;
-  }
-
-  const sigma = Math.sqrt(variance);
-  return {
-    id: archetype.id,
-    rawContribution,
-    calibratedScore: sigma > 1e-9 ? rawContribution / sigma : 0,
-    itemContributions,
-  };
+/** Calibrated Item-Profile Matching v3：每题四个选项先题内标准化，再跨题等权累加。 */
+export function getQuestionContribution(
+  archetypeId: ArchetypeId,
+  questionId: string,
+  optionId: OptionId,
+): number {
+  if (!isOptionId(optionId)) throw new Error(`${questionId} 的答案不是合法选项：${String(optionId)}`);
+  const distances = OPTION_IDS.map((option) => squaredDistanceForQuestion(archetypeId, questionId, option));
+  const standardDeviation = populationSd(distances);
+  if (standardDeviation < 1e-9) return 0;
+  return (mean(distances) - squaredDistanceForQuestion(archetypeId, questionId, optionId)) / standardDeviation;
 }
 
-/**
- * 最终人格分类。注意：这是题目级校准匹配，不是旧的六维简单欧氏距离。
- */
-export function matchArchetypes(
-  answers: AnswerMap,
+export function calculateMatchScores(
+  answers: QuizAnswers,
   questions: readonly Question[] = QUESTIONS,
-  archetypes: Record<ArchetypeId, Archetype> = ARCHETYPES,
-): MatchResult {
+): Record<ArchetypeId, number> {
   assertQuestionSet(questions);
   assertCompleteAnswers(answers, questions);
-  const balanceWeights = calculateDimensionBalanceWeights(questions);
-  const ids = Object.keys(archetypes) as ArchetypeId[];
-  if (ids.length < 3) {
-    throw new Error("至少需要三个候选人格才能生成主型、副型和最不像");
+  const scores = Object.fromEntries(ARCHETYPE_IDS.map((id) => [id, 0])) as Record<ArchetypeId, number>;
+  for (const question of questions) {
+    const optionId = selectedOptionId(answers, question);
+    for (const archetypeId of ARCHETYPE_IDS) {
+      scores[archetypeId] += getQuestionContribution(archetypeId, question.id, optionId);
+    }
   }
-
-  const evaluated = ids.map((id) =>
-    evaluateProfile(answers, archetypes[id], questions, balanceWeights),
-  );
-  const ranked: RankedProfile[] = evaluated
-    .map((profile) => ({ id: profile.id, score: profile.calibratedScore }))
-    .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
-  const highest = ranked[0];
-  const second = ranked[1];
-  const lowest = ranked[ranked.length - 1];
-
-  return {
-    primary: highest.id,
-    secondary: second.id,
-    leastLike: lowest.id,
-    calibratedScores: Object.fromEntries(
-      ranked.map((profile) => [profile.id, round(profile.score)]),
-    ) as Record<ArchetypeId, number>,
-    rawContributions: Object.fromEntries(
-      evaluated.map((profile) => [profile.id, round(profile.rawContribution)]),
-    ) as Record<ArchetypeId, number>,
-    margins: {
-      primarySecondary: round(highest.score - second.score),
-      secondaryLeastLike: round(second.score - lowest.score),
-    },
-    nearTie: highest.score - second.score <= NEAR_TIE_THRESHOLD,
-  };
+  return scores;
 }
 
-/**
- * 生成结果页“为什么是你”的证据。
- *
- * 排序同时考虑：对主型的正向贡献，以及相对副型的区分度。
- * 这样不会只挑一条“大家都可能选”的泛证据。
- */
-export function generateEvidence(
-  answers: AnswerMap,
-  primary: ArchetypeId,
-  secondary: ArchetypeId,
+/** 六维展示分：每题先减去本题四个选项的中心，再按维度聚合。 */
+export function calculateSixDimensionProfile(
+  answers: QuizAnswers,
   questions: readonly Question[] = QUESTIONS,
-  archetypes: Record<ArchetypeId, Archetype> = ARCHETYPES,
+): DimensionVector {
+  assertQuestionSet(questions);
+  assertAnswersBelongToQuestionSet(answers, questions);
+  const centeredByDimension: Record<DimensionId, number[]> = { R: [], S: [], B: [], D: [], G: [], I: [] };
+  const positiveCaps: Record<DimensionId, number[]> = { R: [], S: [], B: [], D: [], G: [], I: [] };
+  const negativeCaps: Record<DimensionId, number[]> = { R: [], S: [], B: [], D: [], G: [], I: [] };
+
+  for (const question of questions) {
+    const optionId = answers[question.id];
+    if (!isOptionId(optionId)) continue;
+    const scoring = QUESTION_SCORING_V3[question.id];
+    for (const dimension of scoring.dimensions) {
+      const values = OPTION_IDS.map((option) => {
+        const value = scoring.options[option][dimension];
+        if (value == null) throw new Error(`缺少 ${dimension} 评分：${question.id}/${option}`);
+        return value;
+      });
+      const center = mean(values);
+      const centered = values.map((value) => value - center);
+      centeredByDimension[dimension].push(scoring.options[optionId][dimension]! - center);
+      positiveCaps[dimension].push(Math.max(...centered));
+      negativeCaps[dimension].push(Math.abs(Math.min(...centered)));
+    }
+  }
+
+  const result = createDimensionVector(50);
+  for (const dimension of DIMENSION_ORDER) {
+    if (centeredByDimension[dimension].length === 0) continue;
+    const raw = mean(centeredByDimension[dimension]);
+    const positiveCap = mean(positiveCaps[dimension]) || 1;
+    const negativeCap = mean(negativeCaps[dimension]) || 1;
+    const normalized = raw >= 0
+      ? 50 + 50 * Math.min(raw / positiveCap, 1)
+      : 50 - 50 * Math.min(Math.abs(raw) / negativeCap, 1);
+    result[dimension] = Math.round(normalized * 10) / 10;
+  }
+  return result;
+}
+
+export function calculateEvidence(
+  answers: QuizAnswers,
+  primaryType: ArchetypeId,
+  secondaryType: ArchetypeId,
+  questions: readonly Question[] = QUESTIONS,
   limit = 3,
 ): EvidenceItem[] {
   assertQuestionSet(questions);
   assertCompleteAnswers(answers, questions);
-  const balanceWeights = calculateDimensionBalanceWeights(questions);
-  const primaryProfile = evaluateProfile(
-    answers,
-    archetypes[primary],
-    questions,
-    balanceWeights,
-  );
-  const secondaryProfile = evaluateProfile(
-    answers,
-    archetypes[secondary],
-    questions,
-    balanceWeights,
-  );
-
-  const candidates = questions.map((question) => {
-    const optionId = assertAnswerValue(question, answers);
-    if (!optionId) {
-      throw new Error("Q" + question.id + " 缺少答案");
-    }
-    const option = getOption(question, optionId);
-    if (!option) {
-      throw new Error("Q" + question.id + " 缺少选项 " + optionId);
-    }
-    const primaryContribution = primaryProfile.itemContributions[question.id] ?? 0;
-    const secondaryContribution = secondaryProfile.itemContributions[question.id] ?? 0;
-    const contrastWithSecondary = primaryContribution - secondaryContribution;
-    const evidenceRank =
-      primaryContribution * 0.65 + contrastWithSecondary * 0.35;
-    return {
-      questionId: question.id,
-      optionId,
-      questionTitle: question.title,
-      optionText: option.text,
-      evidenceText: option.evidenceText,
-      dimensions: question.dimensions,
-      primaryContribution: round(primaryContribution),
-      contrastWithSecondary: round(contrastWithSecondary),
-      evidenceRank,
-    };
-  });
-
-  candidates.sort(
-    (a, b) =>
-      b.evidenceRank - a.evidenceRank || a.questionId - b.questionId,
-  );
-  const positive = candidates.filter(
-    (candidate) => candidate.primaryContribution > 0,
-  );
-  const selected = (positive.length >= limit ? positive : candidates).slice(
-    0,
-    Math.max(1, limit),
-  );
-
-  return selected.map(({ evidenceRank, ...evidence }) => {
-    void evidenceRank;
-    return evidence;
-  });
+  return questions
+    .map((question) => {
+      const optionId = selectedOptionId(answers, question);
+      const primaryContribution = getQuestionContribution(primaryType, question.id, optionId);
+      const secondaryContribution = getQuestionContribution(secondaryType, question.id, optionId);
+      return {
+        questionId: question.id,
+        optionId,
+        primaryContribution,
+        secondaryContribution,
+        evidenceScore: primaryContribution - secondaryContribution,
+        questionTitle: question.title,
+        optionText: question.options.find((option) => option.id === optionId)!.text,
+      };
+    })
+    .sort((left, right) => right.evidenceScore - left.evidenceScore || left.questionId.localeCompare(right.questionId))
+    .slice(0, Math.max(1, limit));
 }
 
-/**
- * 一次性得到完整结果，供结果页直接消费。
- */
-export function calculateResult(
-  answers: AnswerMap,
+export function scoreQuiz(
+  answers: QuizAnswers,
   questions: readonly Question[] = QUESTIONS,
-  archetypes: Record<ArchetypeId, Archetype> = ARCHETYPES,
-): ComputedResult {
-  const scores = calculateDimensionScores(answers, questions);
-  const match = matchArchetypes(answers, questions, archetypes);
-  const evidence = generateEvidence(
-    answers,
-    match.primary,
-    match.secondary,
-    questions,
-    archetypes,
-  );
-
+): QuizResult {
+  assertQuestionSet(questions);
+  assertCompleteAnswers(answers, questions);
+  const matchScores = calculateMatchScores(answers, questions);
+  const ranking = [...ARCHETYPE_IDS].sort((left, right) => matchScores[right] - matchScores[left] || left.localeCompare(right));
+  const primaryType = ranking[0];
+  const secondaryType = ranking[1];
+  const leastLikeType = ranking[ranking.length - 1];
   return {
-    scores,
-    primary: match.primary,
-    secondary: match.secondary,
-    leastLike: match.leastLike,
-    calibratedScores: match.calibratedScores,
-    evidence,
-    nearTie: match.nearTie,
+    primaryType,
+    secondaryType,
+    leastLikeType,
+    matchScores,
+    sixDimensionProfile: calculateSixDimensionProfile(answers, questions),
+    topEvidenceQuestions: calculateEvidence(answers, primaryType, secondaryType, questions),
+    primarySecondaryDifference: round(matchScores[primaryType] - matchScores[secondaryType]),
   };
 }
+
+export const calculateResult = scoreQuiz;

@@ -1,6 +1,6 @@
 # FLOWER STUDIES ARCHIVE｜花少人格鉴定
 
-这是交给 Codex / Claude Code 的 V1 开发输入包，内容版本为 `Question Set v2.4`，人格坐标为当前优化版，计分版本为 `Calibrated Item-Profile Matching v2.0`。
+这是《花少人格鉴定》的 Next.js + TypeScript 网站，当前内容版本为 `Question Set v3.0 Final Candidate`，人格坐标为 `Archetype Profiles v2.0`，计分版本为 `Calibrated Item-Profile Matching v3.0`。
 
 ## 一句话说明
 
@@ -15,9 +15,11 @@ README.md             项目说明和接入建议
 types.ts              共享类型
 data/
   dimensions.ts       六维定义与展示标签
-  questions.ts        24 题、96 个选项和评分
-  archetypes.ts       七人格原型坐标
-  results.ts          七人格固定结果文案
+  questions.ts        V3 24 题、96 个选项与题目映射
+  question-scoring.v3.ts 24×4 选项评分矩阵
+  archetypes.ts       七人格 v2 原型坐标
+  results.ts          Result System v1 固定结果文案
+  types.ts            V3 内容与结果类型
 lib/
   scoring.ts          六维分数、校准匹配、证据生成
   scoring.test.ts     推荐的最小单元测试
@@ -29,10 +31,9 @@ lib/
 
 1. 将 `data/` 和 `lib/` 复制到前端项目；
 2. 用 `QUESTIONS` 渲染单题流程；
-3. 用 `calculateDimensionScores(answers)` 生成六维展示分；
-4. 用 `matchArchetypes(answers)` 生成主型、副型、最不像；
-5. 用 `generateEvidence(answers, match.primary, match.secondary)` 生成结果证据；
-6. 用 `RESULT_CONTENT[match.primary]` 拼装结果页和分享卡。
+3. 用 `calculateSixDimensionProfile(answers)` 生成题内中心化后的六维展示分；
+4. 用 `scoreQuiz(answers)` 生成主型、副型、最不像、证据与主副型差值；
+5. 用 `RESULT_CONTENT[result.primaryType]` 拼装结果页和分享卡。
 
 正式结果建议统一调用：
 
@@ -42,7 +43,7 @@ import { calculateResult } from "./lib/scoring";
 const result = calculateResult(answers);
 ```
 
-`answers` 的格式是 `{ [questionId]: optionId }`，例如 `{ 1: "D", 2: "A" }`。正式分类必须包含 24 道题的合法答案。
+`answers` 的格式是 `{ [questionId]: optionId }`，例如 `{ Q01: "D", Q02: "A" }`。正式分类必须包含 24 道题的合法答案。
 
 ## 页面主链路
 
@@ -60,11 +61,11 @@ const result = calculateResult(answers);
 
 ## 计分口径
 
-每个选项只在本题的两个维度上提供 1–5 的位置分。六维展示分是各维度观测值的加权平均，再映射到 0–100；它不是概率。
+每个选项只在本题的两个维度上提供 1–5 的位置分。六维展示分先在题内中心化，再按维度聚合并映射到 0–100；它不是概率。
 
-人格分类使用题目级的 Item-Profile Matching：对每个候选人格，比较用户每道题的选项位置与该人格在同一题上的距离，再以该题四个选项的平均距离作为基线，并按该人格随机选项理论标准差做校准。这样随机回答不会因为几何空间偏置天然偏向某个人格。
+人格分类使用题目级的 Calibrated Item-Profile Matching v3：对每个候选人格，比较用户每道题的选项位置与该人格在同一题上的距离，以该题四个选项的平均距离为基线，并按题内标准差进行校准后等权累加。这样随机回答不会因为几何空间偏置天然偏向某个人格。
 
-主型取校准分最高者，副型取第二名，最不像取最低者。只报告相对匹配和证据，不报告虚构的统计准确率。
+主型取校准分最高者，副型取第二名，最不像取最低者；证据按 `primaryContribution - secondaryContribution` 选出约 3 道用户真实作答题。只报告相对匹配和证据，不报告虚构的统计准确率。
 
 ## 结果边界
 

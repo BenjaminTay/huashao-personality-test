@@ -1,28 +1,21 @@
-import type { Dimension } from "./dimensions";
+import type { ArchetypeId, DimensionId } from "./types";
 
-export const ARCHETYPE_VERSION = "1.0";
-
-export type ArchetypeId =
-  | "mao"
-  | "xu"
-  | "ning"
-  | "zheng"
-  | "chen"
-  | "jing"
-  | "yang";
+export const ARCHETYPE_VERSION = "2.0";
 
 export interface Archetype {
   id: ArchetypeId;
+  name: string;
   personName: string;
   englishName: string;
   title: string;
   strategy: string;
-  coordinates: Record<Dimension, number>;
+  coordinates: Record<DimensionId, number>;
 }
 
 export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
   mao: {
     id: "mao",
+    name: "毛阿敏",
     personName: "毛阿敏型",
     englishName: "MAO TYPE",
     title: "人际关系导航仪",
@@ -31,6 +24,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
   },
   xu: {
     id: "xu",
+    name: "许晴",
     personName: "许晴型",
     englishName: "XU TYPE",
     title: "关系纯度检测仪",
@@ -39,6 +33,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
   },
   ning: {
     id: "ning",
+    name: "宁静",
     personName: "宁静型",
     englishName: "NING TYPE",
     title: "边界主权持有人",
@@ -47,6 +42,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
   },
   zheng: {
     id: "zheng",
+    name: "郑爽",
     personName: "郑爽型",
     englishName: "ZHENG TYPE",
     title: "人际系统自动自检员",
@@ -55,6 +51,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
   },
   chen: {
     id: "chen",
+    name: "陈意涵",
     personName: "陈意涵型",
     englishName: "CHEN TYPE",
     title: "幸福者退让",
@@ -63,6 +60,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
   },
   jing: {
     id: "jing",
+    name: "井柏然",
     personName: "井柏然型",
     englishName: "JING TYPE",
     title: "公共关系维修工",
@@ -71,6 +69,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
   },
   yang: {
     id: "yang",
+    name: "杨洋",
     personName: "杨洋型",
     englishName: "YANG TYPE",
     title: "真的来旅游的人",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ACTS, QUESTIONS, QUESTION_SET_VERSION, type OptionId } from "../data/questions";
+import { ACTS, QUESTIONS, QUESTION_SET_VERSION } from "../data/questions";
 import { ARCHETYPES, type Archetype } from "../data/archetypes";
 import { DIMENSIONS, DIMENSION_ORDER } from "../data/dimensions";
 import {
@@ -9,6 +9,7 @@ import {
   RESULT_DISCLAIMER,
   type PersonalityResultContent,
 } from "../data/results";
+import type { ArchetypeId, OptionId } from "../data/types";
 import { calculateResult } from "../lib/scoring";
 import type { AnswerMap, ComputedResult } from "../types";
 
@@ -34,6 +35,16 @@ const ACT_NOTES: Record<1 | 2 | 3 | 4, string[]> = {
   2: ["我没事", "别多想", "你怎么了"],
   3: ["先吃饭", "你觉得呢", "把话说清楚"],
   4: ["以后再约", "还联系吗", "下次见"],
+};
+
+const RESULT_SYMBOLS: Record<ArchetypeId, string> = {
+  mao: "map",
+  xu: "truth",
+  ning: "boundary",
+  zheng: "error-log",
+  chen: "exit",
+  jing: "repair",
+  yang: "tourist",
 };
 
 function isOptionId(value: unknown): value is OptionId {
@@ -90,8 +101,8 @@ function readSession(): {
   }
 }
 
-function formatQuestionNumber(value: number): string {
-  return String(value).padStart(2, "0");
+function formatQuestionNumber(value: string | number): string {
+  return String(value).replace(/^Q/, "").padStart(2, "0");
 }
 
 function escapeXml(value: string): string {
@@ -115,14 +126,14 @@ function wrapShareText(value: string, maxLength: number): string[] {
 function createShareCardSvg(
   archetype: Archetype,
   content: PersonalityResultContent,
-  displayScores: ComputedResult["scores"]["display"],
+  displayScores: ComputedResult["sixDimensionProfile"],
 ): string {
-  const shareLines = wrapShareText(content.shareCopy, 18).slice(0, 3);
+  const shareLines = wrapShareText(content.share, 18).slice(0, 3);
   const dimensionRows = DIMENSION_ORDER.map((dimension, index) => {
     const definition = DIMENSIONS[dimension];
     const score = displayScores[dimension];
     const y = 790 + index * 43;
-    return `<text x="72" y="${y}" fill="#6f7069" font-family="monospace" font-size="16">${dimension}  ${escapeXml(definition.shortName)}</text>
+    return `<text x="72" y="${y}" fill="#6f7069" font-family="monospace" font-size="16">${dimension}  ${escapeXml(definition.displayName)}</text>
       <rect x="310" y="${y - 14}" width="360" height="9" fill="#d5c8b4"/>
       <rect x="310" y="${y - 14}" width="${score * 3.6}" height="9" fill="#4c7180"/>
       <text x="730" y="${y}" fill="#87392f" font-family="monospace" font-size="18">${score}</text>`;
@@ -145,7 +156,7 @@ function createShareCardSvg(
     ${dimensionRows}
     <circle cx="750" cy="1035" r="61" fill="none" stroke="#b64c3e" stroke-width="2"/>
     <text x="750" y="1028" fill="#b64c3e" font-family="monospace" font-size="15" text-anchor="middle">HEART-EYE</text>
-    <text x="750" y="1052" fill="#b64c3e" font-family="serif" font-size="22" text-anchor="middle">${escapeXml(content.memeScore.label)}</text>
+    <text x="750" y="1052" fill="#b64c3e" font-family="serif" font-size="22" text-anchor="middle">${escapeXml(content.keywords[0])}</text>
     <text x="60" y="1110" fill="#6f7069" font-family="monospace" font-size="14">纯娱乐原型 · 3:4 ARCHIVE CARD</text>
   </svg>`;
 }
@@ -165,7 +176,7 @@ export default function Home() {
   const currentQuestion = QUESTIONS[currentIndex];
   const currentAct = ACTS.find((act) => act.act === currentQuestion?.act) ?? ACTS[0];
   const answeredCount = Object.keys(answers).length;
-  const savedQuestionNumber = currentQuestion?.id ?? 1;
+  const savedQuestionNumber = currentQuestion?.id ?? "Q01";
   const homeSubtitle = HOME_SUBTITLES[0];
 
   useEffect(() => {
@@ -247,7 +258,7 @@ export default function Home() {
     setResult(null);
     setHasSavedProgress(false);
     setSavedScreen("quiz");
-    setScreen("quiz");
+    setScreen("act");
   }
 
   function continueSaved() {
@@ -376,7 +387,7 @@ function HomeScreen({
   subtitle: string;
   hasSavedProgress: boolean;
   answeredCount: number;
-  savedQuestionNumber: number;
+  savedQuestionNumber: string;
   savedScreen: Screen;
   onStart: () => void;
   onContinue: () => void;
@@ -449,7 +460,8 @@ function QuizScreen({
   onPrevious: () => void;
   onHome: () => void;
 }) {
-  const progress = (question.id / QUESTIONS.length) * 100;
+  const questionNumber = currentIndex + 1;
+  const progress = (questionNumber / QUESTIONS.length) * 100;
 
   return (
     <section className="quiz-screen page-enter" aria-labelledby="question-title">
@@ -461,11 +473,11 @@ function QuizScreen({
             ← 返回首页
           </button>
         </div>
-        <div className="question-count" aria-label={`第 ${question.id} 题，共 ${QUESTIONS.length} 题`}>
+        <div className="question-count" aria-label={`第 ${questionNumber} 题，共 ${QUESTIONS.length} 题`}>
           <strong>{formatQuestionNumber(question.id)}</strong><span> / {QUESTIONS.length}</span>
         </div>
       </div>
-      <div className="progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={QUESTIONS.length} aria-valuenow={question.id} aria-label="答题进度">
+      <div className="progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={QUESTIONS.length} aria-valuenow={questionNumber} aria-label="答题进度">
         <span style={{ width: `${progress}%` }} />
       </div>
       <div className="question-card">
@@ -537,8 +549,8 @@ function LoadingScreen({ line, onSkip }: { line: string; onSkip: () => void }) {
 }
 
 function RevealScreen({ result, onOpen }: { result: ComputedResult; onOpen: () => void }) {
-  const archetype = ARCHETYPES[result.primary];
-  const content = RESULT_CONTENT[result.primary];
+  const archetype = ARCHETYPES[result.primaryType];
+  const content = RESULT_CONTENT[result.primaryType];
   return (
     <section className="reveal-screen page-enter" aria-labelledby="reveal-title">
       <p className="eyebrow"><span className="red-dot" /> RESULT REVEAL / FILE CLOSED</p>
@@ -553,14 +565,14 @@ function RevealScreen({ result, onOpen }: { result: ComputedResult; onOpen: () =
 }
 
 function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: () => void }) {
-  const primary = ARCHETYPES[result.primary];
-  const secondary = ARCHETYPES[result.secondary];
-  const leastLike = ARCHETYPES[result.leastLike];
-  const content = RESULT_CONTENT[result.primary];
-  const secondaryContent = RESULT_CONTENT[result.secondary];
+  const primary = ARCHETYPES[result.primaryType];
+  const secondary = ARCHETYPES[result.secondaryType];
+  const leastLike = ARCHETYPES[result.leastLikeType];
+  const content = RESULT_CONTENT[result.primaryType];
+  const secondaryContent = RESULT_CONTENT[result.secondaryType];
   const shareCardSvg = useMemo(
-    () => createShareCardSvg(primary, content, result.scores.display),
-    [content, primary, result.scores.display],
+    () => createShareCardSvg(primary, content, result.sixDimensionProfile),
+    [content, primary, result.sixDimensionProfile],
   );
   const shareCardHref = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(shareCardSvg)}`;
 
@@ -568,33 +580,31 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
     <section className="result-screen page-enter" aria-labelledby="result-title">
       <div className="result-file-head">
         <div><p className="eyebrow"><span className="red-dot" /> PERSONALITY FILE / FSA-002</p><p className="result-timecode">TRAVEL GROUP / FIELD REPORT</p></div>
-        <span className={`result-symbol symbol-${content.visualSymbol}`} aria-hidden="true" />
+        <span className={`result-symbol symbol-${RESULT_SYMBOLS[result.primaryType]}`} aria-hidden="true" />
       </div>
       <div className="result-hero">
         <p className="result-english">{primary.englishName}</p>
         <h1 id="result-title">{primary.personName}</h1>
         <p className="result-type-title">{primary.title}</p>
         <div className="result-scene-quote">
-          <span>花少2 / 名场面台词</span>
-          <blockquote>“{content.archiveQuote}”</blockquote>
+          <span>花少2 / 花学档案文案</span>
+          <blockquote>“{content.share}”</blockquote>
         </div>
         <p className="result-punchline">{content.punchline}</p>
         <div className="result-strategy"><span>YOUR DEFAULT STRATEGY</span><strong>{primary.strategy}</strong></div>
       </div>
-
-      {result.nearTie && <p className="near-tie-note">批注：你的主型和副型距离很近，说明你在不同关系场景里会切换策略。</p>}
 
       <section className="result-section dimension-section" aria-labelledby="dimensions-title">
         <div className="section-heading"><div><p className="eyebrow"><span className="red-dot" /> FIELD READOUT 01</p><h2 id="dimensions-title">六维关系画像</h2></div><span className="score-note">展示分 / 0—100</span></div>
         <div className="dimension-grid">
           {DIMENSION_ORDER.map((dimension) => {
             const definition = DIMENSIONS[dimension];
-            const score = result.scores.display[dimension];
+            const score = result.sixDimensionProfile[dimension];
             return (
               <article className="dimension-card" key={dimension}>
-                <div className="dimension-card-head"><span className="dimension-id">{dimension}</span><strong>{definition.publicName}</strong><b>{score}</b></div>
+                <div className="dimension-card-head"><span className="dimension-id">{dimension}</span><strong>{definition.displayName}</strong><b>{score}</b></div>
                 <p>{definition.description}</p>
-                <div className="score-bar" role="img" aria-label={`${definition.publicName}展示分 ${score} 分`}><span style={{ width: `${score}%` }} /></div>
+                <div className="score-bar" role="img" aria-label={`${definition.displayName}展示分 ${score} 分`}><span style={{ width: `${score}%` }} /></div>
                 <div className="score-labels"><span>{definition.lowLabel}</span><span>{definition.highLabel}</span></div>
               </article>
             );
@@ -608,9 +618,9 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
           <div className="core-stamp" aria-hidden="true">S02<br /><strong>LOG</strong></div>
           <div>
             <p className="eyebrow"><span className="red-dot" /> 你的相处方式 / RELATION NOTE</p>
-            <h2 id="core-title">{content.coreAlgorithmTitle}</h2>
-            <p className="core-analysis">{content.coreAnalysis}</p>
-            <p className="misunderstood-note"><span>花学批注</span>{content.misunderstoodAs}</p>
+            <h2 id="core-title">核心算法</h2>
+            <p className="core-analysis">{content.core}</p>
+            <p className="misunderstood-note"><span>最容易被误会成</span>{content.misunderstood} {content.misunderstoodExplain}</p>
           </div>
         </div>
       </section>
@@ -618,30 +628,30 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
       <section className="result-section evidence-section" aria-labelledby="evidence-title">
         <div className="section-heading"><div><p className="eyebrow"><span className="red-dot" /> FIELD READOUT 02</p><h2 id="evidence-title">为什么是你</h2></div><span className="evidence-count">3 RECORDS</span></div>
         <div className="evidence-list">
-          {result.evidence.map((evidence, index) => (
+          {result.topEvidenceQuestions.map((evidence, index) => (
             <article className="evidence-card" key={`${evidence.questionId}-${evidence.optionId}`}>
               <div className="evidence-mark">0{index + 1}</div>
-              <div><p className="evidence-question">Q{formatQuestionNumber(evidence.questionId)} / {evidence.questionTitle}</p><p>{evidence.evidenceText}</p></div>
+              <div><p className="evidence-question">Q{formatQuestionNumber(evidence.questionId)} / {evidence.questionTitle} · 选择 {evidence.optionId}</p><p>{evidence.optionText}</p></div>
             </article>
           ))}
         </div>
       </section>
 
       <section className="result-section split-section" aria-label="高光面与花少 BUG">
-        <article className="side-card bright-card"><p className="eyebrow"><span className="green-dot" /> HIGH LIGHT</p><h2>{content.brightTitle}</h2><p>{content.brightSide}</p></article>
-        <article className="side-card bug-card"><p className="eyebrow"><span className="red-dot" /> FLOWER BUG</p><h2>{content.bugTitle}</h2><p>{content.shadowSide}</p></article>
+        <article className="side-card bright-card"><p className="eyebrow"><span className="green-dot" /> HIGH LIGHT</p><h2>Bright Side</h2><p>{content.bright}</p></article>
+        <article className="side-card bug-card"><p className="eyebrow"><span className="red-dot" /> FLOWER BUG</p><h2>花少 Bug</h2><p>{content.bug}</p></article>
       </section>
 
       <section className="result-section cast-section" aria-labelledby="cast-title">
         <div className="section-heading"><div><p className="eyebrow"><span className="red-dot" /> RELATION MAP</p><h2 id="cast-title">你的其他坐标</h2></div></div>
         <div className="cast-grid">
-          <article className="cast-card secondary-card"><span className="cast-label">副型 / SECONDARY</span><h3>{secondary.personName}</h3><p>{secondary.title}</p><div className="cast-strategy">更接近：{secondary.strategy}</div><small>{secondaryContent.memeScore.label} · {secondaryContent.memeScore.description}</small></article>
+          <article className="cast-card secondary-card"><span className="cast-label">副型 / SECONDARY</span><h3>{secondary.personName}</h3><p>{secondary.title}</p><div className="cast-strategy">更接近：{secondary.strategy}</div><small>{secondaryContent.keywords.join(" · ")}</small></article>
           <article className="cast-card least-card"><span className="cast-label">最不像 / LEAST LIKE</span><h3>{leastLike.personName}</h3><p>{leastLike.title}</p><div className="cast-strategy">相反方向：{leastLike.strategy}</div></article>
         </div>
       </section>
 
       <section className="result-section meme-section" aria-label="花学彩蛋">
-        <div className="meme-block"><p className="eyebrow"><span className="red-dot" /> HEART-EYE BALANCE / 花学批注</p><h2>{content.memeScore.label}</h2><p>{content.memeScore.description}</p></div>
+        <div className="meme-block"><p className="eyebrow"><span className="red-dot" /> HEART-EYE BALANCE / 花学批注</p><h2>心眼子状态</h2><p>{content.heartschemes}</p></div>
       </section>
 
       <section className="result-section share-section" aria-labelledby="share-title">
@@ -650,17 +660,17 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
           <p className="share-card-kicker">{primary.englishName}</p>
           <h2>{primary.personName}</h2>
           <p className="share-card-title">{primary.title}</p>
-          <p className="share-card-copy">{content.shareCopy}</p>
+          <p className="share-card-copy">{content.share}</p>
           <div className="share-card-bars">
-            {DIMENSION_ORDER.map((dimension) => <span key={dimension} style={{ height: `${Math.max(18, result.scores.display[dimension] * 0.52)}px` }} title={`${DIMENSIONS[dimension].shortName} ${result.scores.display[dimension]}`} />)}
+            {DIMENSION_ORDER.map((dimension) => <span key={dimension} style={{ height: `${Math.max(18, result.sixDimensionProfile[dimension] * 0.52)}px` }} title={`${DIMENSIONS[dimension].displayName} ${result.sixDimensionProfile[dimension]}`} />)}
           </div>
-          <div className="share-card-footer"><span>3:4 ARCHIVE CARD</span><strong>{content.memeScore.label}</strong></div>
+          <div className="share-card-footer"><span>3:4 ARCHIVE CARD</span><strong>{content.keywords[0]}</strong></div>
         </div>
         <div className="share-copy-block">
           <p className="eyebrow"><span className="red-dot" /> SHAREABLE FILE</p>
           <h2 id="share-title">把这份档案带走</h2>
           <p>一张适合发出去的 3:4 花学档案卡，把你的类型和名场面带走。</p>
-          <a className="download-action" href={shareCardHref} download={`flower-studies-${result.primary}-archive.svg`}>下载 3:4 档案卡 <span>↘</span></a>
+          <a className="download-action" href={shareCardHref} download={`flower-studies-${result.primaryType}-archive.svg`}>下载 3:4 档案卡 <span>↘</span></a>
           <p className="share-format-note">9:16 竖屏版本接口已预留 · 可直接使用结果页截图分享</p>
         </div>
       </section>

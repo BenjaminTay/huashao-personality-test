@@ -1,112 +1,120 @@
 import { describe, expect, it } from "vitest";
 import { ARCHETYPES } from "../data/archetypes";
-import { DIMENSION_ORDER } from "../data/dimensions";
+import { DIMENSIONS, DIMENSION_ORDER } from "../data/dimensions";
+import { QUESTION_SCORING_V3 } from "../data/question-scoring.v3";
 import { QUESTIONS, QUESTION_SET_VERSION } from "../data/questions";
+import type { ArchetypeId, QuizAnswers } from "../data/types";
 import {
-  calculateDimensionScores,
   calculateResult,
-  matchArchetypes,
+  calculateSixDimensionProfile,
+  getQuestionContribution,
+  scoreQuiz,
   validateQuestionSet,
 } from "./scoring";
-import type { AnswerMap } from "../types";
 
-const ALL_A_ANSWERS: AnswerMap = Object.fromEntries(
+const ALL_A_ANSWERS: QuizAnswers = Object.fromEntries(
   QUESTIONS.map((question) => [question.id, "A"]),
-) as AnswerMap;
+);
 
-describe("Flower Studies scoring v2.0", () => {
-  it("keeps the frozen content shape intact", () => {
+describe("Calibrated Item-Profile Matching v3", () => {
+  it("uses the complete V3 content shape", () => {
     const validation = validateQuestionSet();
     expect(validation.errors).toEqual([]);
-    expect(QUESTION_SET_VERSION).toBe("2.4");
+    expect(QUESTION_SET_VERSION).toBe("3.0");
     expect(validation.questionCount).toBe(24);
     expect(validation.optionCount).toBe(96);
     expect(Object.values(ARCHETYPES)).toHaveLength(7);
+    expect(Object.keys(DIMENSIONS)).toEqual(["R", "S", "B", "D", "G", "I"]);
+    expect(DIMENSIONS.B.internalName).toBe("人际边界");
+    expect(DIMENSIONS.B.displayName).toBe("边界感");
   });
 
-  it("calculates six display dimensions separately from profile matching", () => {
-    const scores = calculateDimensionScores(ALL_A_ANSWERS);
-    expect(scores.isComplete).toBe(true);
-    expect(Object.keys(scores.display)).toEqual(["R", "S", "B", "D", "G", "I"]);
-    for (const value of Object.values(scores.display)) {
+  it("keeps the V3 question set and matrix aligned", () => {
+    expect(QUESTIONS.map((question) => question.id)).toEqual(
+      Array.from({ length: 24 }, (_, index) => `Q${String(index + 1).padStart(2, "0")}`),
+    );
+    expect(Object.keys(QUESTION_SCORING_V3)).toHaveLength(24);
+    for (const question of QUESTIONS) {
+      expect(question.options).toHaveLength(4);
+      expect(question.options.map((option) => option.id)).toEqual(["A", "B", "C", "D"]);
+    }
+  });
+
+  it("centers selected item scores before aggregating the six dimensions", () => {
+    const profile = calculateSixDimensionProfile(ALL_A_ANSWERS);
+    expect(Object.keys(profile)).toEqual([...DIMENSION_ORDER]);
+    for (const value of Object.values(profile)) {
       expect(value).toBeGreaterThanOrEqual(0);
       expect(value).toBeLessThanOrEqual(100);
     }
+
+    const oldUncenteredAverage = Object.fromEntries(
+      DIMENSION_ORDER.map((dimension) => {
+        const values = QUESTIONS.filter((question) => question.dimensions.includes(dimension))
+          .map((question) => question.options[0].scores[dimension] ?? 3);
+        return [dimension, Math.round((values.reduce((sum, value) => sum + value, 0) / values.length - 1) * 25)];
+      }),
+    );
+    expect(profile).not.toEqual(oldUncenteredAverage);
   });
 
-  it("is deterministic and exposes primary, secondary and least-like types", () => {
+  it("returns the required V3 result fields deterministically", () => {
     const first = calculateResult(ALL_A_ANSWERS);
     const second = calculateResult(ALL_A_ANSWERS);
     expect(second).toEqual(first);
-    expect(first.primary).not.toBe(first.secondary);
-    expect(first.primary).not.toBe(first.leastLike);
-    expect(first.evidence).toHaveLength(3);
+    expect(first.primaryType).not.toBe(first.secondaryType);
+    expect(first.primaryType).not.toBe(first.leastLikeType);
+    expect(first.topEvidenceQuestions).toHaveLength(3);
+    expect(typeof first.primarySecondaryDifference).toBe("number");
+    expect(Object.keys(first.sixDimensionProfile)).toEqual([...DIMENSION_ORDER]);
   });
 
-  it("keeps the Q17 relationship choices behaviorally distinct", () => {
-    const question = QUESTIONS.find((candidate) => candidate.id === 17);
-    expect(question).toBeDefined();
-    expect(new Set(question?.options.map((option) => option.text)).size).toBe(4);
-    expect(question?.options.map((option) => option.scores.R)).toEqual([5, 3, 4, 1]);
-    expect(question?.options.map((option) => option.scores.B)).toEqual([1, 5, 4, 4]);
-  });
-
-  it("only uses selected answers when generating evidence", () => {
-    const answers: AnswerMap = { ...ALL_A_ANSWERS, 17: "D" };
-    const result = calculateResult(answers);
-    for (const evidence of result.evidence) {
+  it("calculates evidence as primary contribution minus secondary contribution", () => {
+    const answers: QuizAnswers = { ...ALL_A_ANSWERS, Q17: "D" };
+    const result = scoreQuiz(answers);
+    for (const evidence of result.topEvidenceQuestions) {
       expect(answers[evidence.questionId]).toBe(evidence.optionId);
+      expect(evidence.evidenceScore).toBeCloseTo(
+        evidence.primaryContribution - evidence.secondaryContribution,
+        2,
+      );
     }
   });
 
-  it("passes the seven-archetype internal consistency check", () => {
-    const coverage = Object.fromEntries(
-      DIMENSION_ORDER.map((dimension) => [
-        dimension,
-        QUESTIONS.reduce(
-          (sum, question) =>
-            sum +
-            (question.dimensions.includes(dimension)
-              ? question.weight ?? 1
-              : 0),
-          0,
-        ),
-      ]),
-    );
-
-    for (const archetype of Object.values(ARCHETYPES)) {
-      const theoreticalAnswers = Object.fromEntries(
+  it("uses the selected option path when checking theoretical archetype consistency", () => {
+    for (const [archetypeId, archetype] of Object.entries(ARCHETYPES) as [ArchetypeId, (typeof ARCHETYPES)[ArchetypeId]][]) {
+      const theoreticalAnswers: QuizAnswers = Object.fromEntries(
         QUESTIONS.map((question) => {
-          const option = question.options.reduce((best, candidate) => {
-            const candidateDistance = question.dimensions.reduce(
-              (sum, dimension) => {
-                const delta =
-                  (candidate.scores[dimension] ?? 3) -
-                  archetype.coordinates[dimension];
-                return sum + (delta * delta) / coverage[dimension];
-              },
-              0,
-            );
-            const bestDistance = question.dimensions.reduce(
-              (sum, dimension) => {
-                const delta =
-                  (best.scores[dimension] ?? 3) -
-                  archetype.coordinates[dimension];
-                return sum + (delta * delta) / coverage[dimension];
-              },
-              0,
-            );
-            return candidateDistance < bestDistance ? candidate : best;
+          const matrix = QUESTION_SCORING_V3[question.id];
+          const option = ["A", "B", "C", "D"] as const;
+          const best = option.reduce((bestOption, optionId) => {
+            const distance = matrix.dimensions.reduce((sum, dimension) => {
+              const delta = matrix.options[optionId][dimension]! - archetype.coordinates[dimension];
+              return sum + delta * delta;
+            }, 0);
+            const bestDistance = matrix.dimensions.reduce((sum, dimension) => {
+              const delta = matrix.options[bestOption][dimension]! - archetype.coordinates[dimension];
+              return sum + delta * delta;
+            }, 0);
+            return distance < bestDistance ? optionId : bestOption;
           });
-          return [question.id, option.id];
+          return [question.id, best];
         }),
       );
-
-      expect(matchArchetypes(theoreticalAnswers).primary).toBe(archetype.id);
+      expect(scoreQuiz(theoreticalAnswers).primaryType).toBe(archetypeId);
     }
   });
 
-  it("rejects incomplete formal submissions", () => {
-    expect(() => matchArchetypes({ 1: "A" })).toThrow("完成全部题目");
+  it("rejects incomplete, unknown, and invalid answers", () => {
+    expect(() => scoreQuiz({ Q01: "A" })).toThrow("完成全部题目");
+    expect(() => scoreQuiz({ ...ALL_A_ANSWERS, Q99: "A" })).toThrow("未知题目");
+    expect(() => scoreQuiz({ ...ALL_A_ANSWERS, Q01: "X" as never })).toThrow("合法选项");
+  });
+
+  it("exposes calibrated question contributions without a six-dimension classifier", () => {
+    expect(getQuestionContribution("mao", "Q01", "A")).toBeTypeOf("number");
+    expect(getQuestionContribution("mao", "Q01", "D")).not.toBe(
+      getQuestionContribution("mao", "Q01", "A"),
+    );
   });
 });
