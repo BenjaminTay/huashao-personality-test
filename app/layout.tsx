@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import "@fontsource/noto-serif-sc/chinese-simplified-400.css";
-import "@fontsource/noto-serif-sc/chinese-simplified-700.css";
-import "@fontsource/noto-sans-sc/chinese-simplified-400.css";
-import "@fontsource/noto-sans-sc/chinese-simplified-700.css";
+import "@fontsource/noto-serif-sc/400.css";
+import "@fontsource/noto-serif-sc/700.css";
+import "@fontsource/noto-sans-sc/400.css";
+import "@fontsource/noto-sans-sc/700.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
