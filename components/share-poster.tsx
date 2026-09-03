@@ -203,7 +203,8 @@ export function buildSharePosterSvg(
   const qrTotal = 184;
   const qrModule = qrTotal / (matrix.size + 8);
   const topDimensions = getTopDimensionIds(displayScores);
-  const punchLines = wrapText(content.punchline, 18).slice(0, 4);
+  const quoteLines = wrapText(`“${content.recall.quote}”`, 16).slice(0, 2);
+  const quoteSrc = content.recall.source;
   const heartLines = wrapText(content.heartschemes, 23).slice(0, 2);
   const qrX = 814;
   const qrY = 1124;
@@ -240,8 +241,9 @@ export function buildSharePosterSvg(
     <text x="72" y="522" fill="${palette.secondary}" font-family="serif" font-size="38" font-weight="700">${escapeXml(archetype.title)}</text>
     ${symbolSvg(archetype.visualSymbol, palette.accent, palette.secondary, 870, 250, 1.32)}
     <rect x="72" y="576" width="936" height="222" fill="${palette.wash}" stroke="${palette.accent}" stroke-opacity=".26"/>
-    <text x="102" y="620" fill="${palette.accent}" font-family="monospace" font-size="15" letter-spacing="3">一句话暴击 / DIRECT HIT</text>
-    ${punchLines.map((line, index) => `<text x="102" y="${680 + index * 39}" fill="${INK}" font-family="serif" font-size="36" font-weight="700">${escapeXml(line)}</text>`).join("")}
+    <text x="102" y="620" fill="${palette.accent}" font-family="monospace" font-size="15" letter-spacing="3">名场面 / ORIGINAL LINE</text>
+    ${quoteLines.map((line, index) => `<text x="102" y="${680 + index * 36}" fill="${INK}" font-family="serif" font-size="36" font-weight="700">${escapeXml(line)}</text>`).join("")}
+    <text x="102" y="${682 + quoteLines.length * 36}" fill="${MUTED}" font-family="monospace" font-size="13" letter-spacing="1">${escapeXml(quoteSrc)}</text>
     <text x="72" y="874" fill="${palette.accent}" font-family="monospace" font-size="15" letter-spacing="3">TOP 02 / 两个最突出维度</text>
     ${dimensionMarkup}
     <path d="M72 1030H1008" stroke="${INK}" stroke-opacity=".22"/>
@@ -286,8 +288,9 @@ export function SharePoster({ archetype, content, displayScores, testUrl, displa
         {previewSymbol(archetype.visualSymbol)}
       </div>
       <section className="share-poster-punch">
-        <p className="share-poster-section-label">一句话暴击 / DIRECT HIT</p>
-        <p>{content.punchline}</p>
+        <p className="share-poster-section-label">名场面 / ORIGINAL LINE</p>
+        <p className="share-poster-quote">“{content.recall.quote}”</p>
+        <p className="share-poster-quote-src">{content.recall.source}</p>
       </section>
       <section className="share-poster-dimensions" aria-label="两个最突出维度">
         <p className="share-poster-section-label">TOP 02 / 两个最突出维度</p>

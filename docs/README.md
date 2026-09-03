@@ -59,7 +59,7 @@ docs/archive/                历史路线，不得被运行时代码引用
 | 六维模型 | Dimension Model v2.1（ID、语义与内部名同 v2.0，展示文案梗感化） |
 | 七人格坐标 | Archetype Profiles v2.1 |
 | 分类器 | Calibrated Item-Profile Matching v3.0（公式未变，矩阵为 v3.1） |
-| 结果文案 | Result System v2.0 |
+| 结果文案 | Result System v2.3（v2.3 去分块化 + V2.4 风格文案重写） |
 
 ## 目录说明
 

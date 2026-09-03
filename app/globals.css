@@ -1033,14 +1033,24 @@ button:disabled { cursor: not-allowed; }
   background: var(--poster-wash);
 }
 
-.share-poster-punch > p:last-child {
+.share-poster-quote {
   display: -webkit-box;
   margin: 3.5% 0 0;
   overflow: hidden;
   color: var(--ink);
-  font: 700 clamp(12px, 4.05cqw, 17px)/1.42 var(--font-display);
+  font: 700 clamp(13px, 4.3cqw, 18px)/1.42 var(--font-display);
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 4;
+}
+
+.share-poster-quote-src {
+  margin: 3% 0 0;
+  overflow: hidden;
+  color: var(--muted-ink);
+  font: 600 clamp(6px, 2.1cqw, 9px) var(--font-mono);
+  letter-spacing: .08em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .share-poster-dimensions { margin-top: 4%; }
@@ -1150,7 +1160,7 @@ button.download-action {
 }
 
 .recall-card figcaption {
-  margin-top: 40px;
+  margin-top: 34px;
 }
 
 .recall-source {
@@ -1175,12 +1185,37 @@ button.download-action {
   .recall-note { font-size: 14px; line-height: 1.8; }
 }
 
+.dev-preview-fab {
+  position: fixed;
+  z-index: 80;
+  right: 18px;
+  bottom: 22px;
+  padding: 14px 22px;
+  border: 2px solid var(--ink);
+  background: var(--archive-red);
+  color: var(--paper);
+  cursor: pointer;
+  font: 700 15px var(--font-display);
+  letter-spacing: .05em;
+  box-shadow: 5px 6px 0 rgba(29, 33, 29, .35);
+}
+
+.dev-preview-fab:hover {
+  background: var(--archive-red-dark);
+  transform: translate(2px, 2px);
+  box-shadow: 3px 4px 0 rgba(29, 33, 29, .35);
+}
+
+@media (max-width: 760px) {
+  .dev-preview-fab { padding: 12px 16px; font-size: 13px; right: 14px; bottom: 14px; }
+}
+
 /* 本地结果页预览条（dev server 或 URL 带 ?preview 时出现，仅用于验收，不进正式体验路径） */
 .dev-preview-bar {
   position: fixed;
   z-index: 60;
   left: 50%;
-  bottom: 14px;
+  bottom: 64px;
   transform: translateX(-50%);
   width: min(720px, calc(100% - 24px));
   padding: 9px 12px 10px;
@@ -1244,15 +1279,170 @@ button.download-action {
   color: var(--paper);
 }
 
-.dev-preview-reopen {
-  position: fixed;
-  z-index: 60;
-  right: 14px;
-  bottom: 14px;
-  padding: 8px 13px;
-  border: 1px solid var(--line-strong);
-  background: rgba(247, 243, 234, .97);
-  box-shadow: 0 8px 20px rgba(29, 33, 29, .18);
-  cursor: pointer;
-  font-size: 12px;
+/* 结果页开场重构（Result System v2.1）：身份收敛 + 名场面金句当主角 */
+.result-hero { padding: 22px 0 0; }
+.result-hero .result-english { margin-bottom: 8px; }
+.result-hero h1 { font-size: clamp(48px, 7.5vw, 84px); }
+.result-hero .result-type-title { margin: 8px 0 0; font-size: clamp(20px, 2.6vw, 30px); }
+.result-hero .result-hero-quote blockquote { font-size: clamp(30px, 4.8vw, 50px); }
+.result-hero .result-hero-quote .recall-note { font-size: 15px; }
+.result-type-strategy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  margin: 15px 0 0;
+  color: var(--muted-ink);
+  font-size: 14px;
+}
+
+.result-type-strategy span {
+  padding: 3px 8px;
+  background: rgba(182, 76, 62, .09);
+  color: var(--archive-red-dark);
+  font: 700 10px var(--font-mono);
+  letter-spacing: .08em;
+}
+
+.hero-stack {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+  gap: 22px;
+  align-items: stretch;
+  margin-top: 38px;
+}
+
+.result-hero .result-hero-quote { margin: 0; }
+
+.heart-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 24px 22px 22px;
+  border: 1px solid var(--archive-red);
+  border-right: 4px solid var(--archive-red);
+  background: rgba(182, 76, 62, .05);
+  box-shadow: 5px 6px 0 rgba(213, 200, 180, .5);
+  transform: rotate(.4deg);
+}
+
+.heart-card-kicker {
+  align-self: flex-start;
+  padding: 5px 11px;
+  background: var(--archive-red);
+  color: var(--paper);
+  font: 700 13px var(--font-display);
+  letter-spacing: .12em;
+}
+
+.heart-card strong {
+  margin: 16px 0 10px;
+  color: var(--archive-red-dark);
+  font: 700 clamp(24px, 2.7vw, 34px)/1.15 var(--font-display);
+}
+
+.heart-card-copy {
+  margin: 0;
+  color: #55584f;
+  font: 13px/1.9 var(--font-display);
+}
+
+.dimension-card .score-labels { margin-top: 14px; }
+
+@media (max-width: 760px) {
+  .result-hero { padding-top: 12px; }
+  .result-hero h1 { font-size: 46px; }
+  .hero-stack { grid-template-columns: 1fr; gap: 16px; margin-top: 26px; }
+  .heart-card { padding: 18px 16px 17px; }
+  .result-hero .result-hero-quote blockquote { font-size: 27px; }
+  .result-type-strategy { font-size: 13px; }
+}
+
+/* 结果页信息架构重构（Result System v2.3）：人格分析文章流 + 第二/绝缘人格卡内强调 */
+.manual-section {
+  background: rgba(229, 221, 206, .16);
+}
+
+.manual-main {
+  max-width: 860px;
+  margin: 0;
+  color: #3f423c;
+  font: 18px/2 var(--font-display);
+}
+
+.manual-side-title {
+  display: flex;
+  align-items: center;
+  max-width: 860px;
+  margin: 36px 0 0;
+  color: var(--ink);
+  font: 700 clamp(18px, 2.4vw, 25px)/1.4 var(--font-display);
+}
+
+.manual-side-body {
+  max-width: 840px;
+  margin: 13px 0 0;
+  color: #52554e;
+  font: 15px/1.95 var(--font-display);
+}
+
+.manual-misread {
+  max-width: 800px;
+  margin: 32px 0 0;
+  padding: 14px 17px;
+  border-left: 3px solid var(--archive-red);
+  background: rgba(182, 76, 62, .06);
+  color: #55584f;
+  font: 14px/1.85 var(--font-display);
+}
+
+.manual-misread span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--archive-red-dark);
+  font: 700 12px var(--font-display);
+}
+
+.cast-role {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--travel-blue);
+  font: 700 21px var(--font-display);
+}
+
+.cast-card h3 { margin: 12px 0 8px; }
+
+.least-card .cast-role { color: var(--archive-red-dark); }
+
+.cast-card p.cast-why {
+  margin: 16px 0 0;
+  color: var(--muted-ink);
+  font: 12px/1.8 var(--font-display);
+}
+
+.cast-card .cast-strategy { margin-top: 15px; }
+
+.least-card {
+  border-style: dashed;
+  border-color: rgba(29, 33, 29, .3);
+  background: rgba(229, 221, 206, .42);
+}
+
+.cast-card::before { content: "对照档案 / ALT FILE"; }
+.least-card::before {
+  content: "绝缘 / NO MATCH";
+  padding: 4px 8px;
+  border: 1px dashed var(--archive-red);
+  background: rgba(250, 247, 239, .85);
+  color: var(--archive-red-dark);
+  font-weight: 700;
+  transform: rotate(5deg);
+}
+
+@media (max-width: 760px) {
+  .manual-main { font-size: 17px; line-height: 1.95; }
+  .manual-side-body { font-size: 14px; line-height: 1.9; }
+  .manual-misread { font-size: 13px; }
+  .cast-role { font-size: 19px; }
+  .cast-card h3 { margin-top: 10px; }
 }

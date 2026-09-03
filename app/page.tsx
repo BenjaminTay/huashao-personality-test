@@ -668,13 +668,30 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
         <p className="result-english">{primary.englishName}</p>
         <h1 id="result-title">{primary.personName}</h1>
         <p className="result-type-title">{primary.title}</p>
-        <p className="result-punchline">{content.punchline}</p>
-        <div className="result-scene-quote">
-          <span>花少2 / 档案台词</span>
-          <blockquote>“{content.share}”</blockquote>
+        <p className="result-type-strategy"><span>花学默认姿势</span>{primary.strategy}</p>
+        <div className="hero-stack">
+          <figure className="recall-card result-hero-quote">
+            <blockquote>“{content.recall.quote}”</blockquote>
+            <figcaption>
+              <p className="recall-note">{content.recall.note}</p>
+            </figcaption>
+          </figure>
+          <aside className="heart-card" aria-label="心眼子状态">
+            <p className="heart-card-kicker">心眼子余额</p>
+            <strong>{content.heartEyeBalance}</strong>
+            <p className="heart-card-copy">{content.heartschemes}</p>
+          </aside>
         </div>
-        <div className="result-strategy"><span>花学默认姿势</span><strong>{primary.strategy}</strong></div>
       </div>
+
+      <section className="result-section manual-section" aria-label="人格分析">
+        <p className="manual-main">{content.core}</p>
+        <h3 className="manual-side-title"><span className="green-dot" aria-hidden="true" />{content.highTitle}</h3>
+        <p className="manual-side-body">{content.high}</p>
+        <h3 className="manual-side-title"><span className="red-dot" aria-hidden="true" />{content.flawTitle}</h3>
+        <p className="manual-side-body">{content.flaw}</p>
+        <p className="manual-misread"><span>你可能被误读成</span>{content.misread}</p>
+      </section>
 
       <section className="result-section dimension-section" aria-labelledby="dimensions-title">
         <div className="section-heading"><div><p className="eyebrow"><span className="red-dot" /> 属性面板</p><h2 id="dimensions-title">关系属性面板</h2></div><span className="score-note">0—100 · 按 24 次选择换算</span></div>
@@ -683,9 +700,8 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
             const definition = DIMENSIONS[dimension];
             const score = result.sixDimensionProfile[dimension];
             return (
-              <article className="dimension-card" key={dimension}>
+              <article className="dimension-card" key={dimension} title={definition.description}>
                 <div className="dimension-card-head"><strong>{definition.displayName}</strong><b>{score}</b></div>
-                <p>{definition.description}</p>
                 <div className="score-bar" role="img" aria-label={`${definition.displayName} ${score} 分`}><span style={{ width: `${score}%` }} /></div>
                 <div className="score-labels"><span>{definition.lowLabel}</span><span>{definition.highLabel}</span></div>
               </article>
@@ -695,59 +711,24 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
         <p className="score-footnote">属性点只反映你这次的选择，不给你下定义——留着跟朋友互相伤害用。</p>
       </section>
 
-      <section className="result-section core-section" aria-labelledby="core-title">
-        <div className="core-layout">
-          <div className="core-stamp" aria-hidden="true">S02<br /><strong>LOG</strong></div>
-          <div>
-            <p className="eyebrow"><span className="red-dot" /> 人格说明书</p>
-            <h2 id="core-title">出厂人设</h2>
-            <p className="core-analysis">{content.core}</p>
-            <p className="misunderstood-note"><span>最容易被误会成</span>{content.misunderstood} {content.misunderstoodExplain}</p>
-          </div>
-        </div>
-      </section>
-
-      <section className="result-section evidence-section" aria-labelledby="evidence-title">
-        <div className="section-heading"><div><p className="eyebrow"><span className="red-dot" /> 答案实锤</p><h2 id="evidence-title">最锤你的三题</h2></div><span className="evidence-count">你的原话 · 一字未改</span></div>
-        <div className="evidence-list">
-          {result.topEvidenceQuestions.map((evidence, index) => (
-            <article className="evidence-card" key={`${evidence.questionId}-${evidence.optionId}`}>
-              <div className="evidence-mark">0{index + 1}</div>
-              <div><p className="evidence-question">Q{formatQuestionNumber(evidence.questionId)} / {evidence.questionTitle} · 你选了 {evidence.optionId}</p><p>“{evidence.optionText}”</p></div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="result-section split-section" aria-label="高光面与花少 BUG">
-        <article className="side-card bright-card"><p className="eyebrow"><span className="green-dot" /> 高光面</p><h2>高光时刻</h2><p>{content.bright}</p></article>
-        <article className="side-card bug-card"><p className="eyebrow"><span className="red-dot" /> Bug 报告</p><h2>花少 Bug</h2><p>{content.bug}</p></article>
-      </section>
-
-      <section className="result-section cast-section" aria-labelledby="cast-title">
-        <div className="section-heading"><div><p className="eyebrow"><span className="red-dot" /> 副本与对家</p><h2 id="cast-title">隐藏款和绝缘款</h2></div></div>
+      <section className="result-section cast-section" aria-label="第二人格与绝缘人格">
         <div className="cast-grid">
-          <article className="cast-card secondary-card"><span className="cast-label">隐藏款 / 你也会这一套</span><h3>{secondary.personName}</h3><p>{secondary.title}</p><div className="cast-strategy">备用模式：{secondary.strategy}</div><small>{secondaryContent.keywords.join(" · ")}</small></article>
-          <article className="cast-card least-card"><span className="cast-label">绝缘款 / 对不上的型号</span><h3>{leastLike.personName}</h3><p>{leastLike.title}</p><div className="cast-strategy">隔着一整条地铁线：{leastLike.strategy}</div></article>
+          <article className="cast-card secondary-card">
+            <span className="cast-role">第二人格</span>
+            <h3>{secondary.personName}</h3>
+            <p>{secondary.title}</p>
+            <p className="cast-why">全场第二接近你的型：同一套关系现场里，它是你身上的另一套打法，有些题你会和 TA 选得一样。</p>
+            <div className="cast-strategy">备用模式：{secondary.strategy}</div>
+            <small>{secondaryContent.keywords.join(" · ")}</small>
+          </article>
+          <article className="cast-card least-card">
+            <span className="cast-role">绝缘人格</span>
+            <h3>{leastLike.personName}</h3>
+            <p>{leastLike.title}</p>
+            <p className="cast-why">七型里离你最远的一位：TA 的默认反应和你几乎零重叠，你很难成为 TA，也基本不会吃 TA 那一套。</p>
+            <div className="cast-strategy">TA 的默认：{leastLike.strategy}</div>
+          </article>
         </div>
-      </section>
-
-      <section className="result-section meme-section" aria-label="花学彩蛋">
-        <div className="meme-block"><p className="eyebrow"><span className="red-dot" /> HEART-EYE BALANCE / 花学批注</p><h2>心眼子状态</h2><p>{content.heartschemes}</p></div>
-      </section>
-
-      <section className="result-section recall-section" aria-labelledby="recall-title">
-        <div className="section-heading">
-          <div><p className="eyebrow"><span className="red-dot" /> 花学考古 / DIG SITE</p><h2 id="recall-title">名场面回响</h2></div>
-          <span className="score-note">互联网考古现场</span>
-        </div>
-        <figure className="recall-card">
-          <blockquote>“{content.recall.quote}”</blockquote>
-          <figcaption>
-            <span className="recall-source">{content.recall.source}</span>
-            <p className="recall-note">{content.recall.note}</p>
-          </figcaption>
-        </figure>
       </section>
 
       <section className="result-section share-section" aria-labelledby="share-title">
