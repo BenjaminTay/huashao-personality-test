@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "@fontsource/noto-serif-sc/chinese-simplified-400.css";
 import "@fontsource/noto-serif-sc/chinese-simplified-700.css";
 import "@fontsource/noto-sans-sc/chinese-simplified-400.css";
@@ -11,6 +12,8 @@ export const metadata: Metadata = {
     "一份关于关系、边界和心眼子余额的花学人格测试。",
 };
 
+const GOATCOUNTER_SITE = process.env.NEXT_PUBLIC_GOATCOUNTER_SITE;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -18,7 +21,17 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-CN">
-      <body>{children}</body>
+      <body>
+        {GOATCOUNTER_SITE ? (
+          <Script
+            async
+            src="https://gc.zgo.at/count.js"
+            data-goatcounter={GOATCOUNTER_SITE}
+            strategy="afterInteractive"
+          />
+        ) : null}
+        {children}
+      </body>
     </html>
   );
 }

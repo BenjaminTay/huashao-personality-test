@@ -11,6 +11,7 @@ import {
 } from "../data/results";
 import type { ArchetypeId, OptionId } from "../data/types";
 import { calculateResult } from "../lib/scoring";
+import { trackShareCard, trackTestComplete, trackTestStart } from "../lib/analytics";
 import type { AnswerMap, ComputedResult } from "../types";
 
 type Screen = "home" | "quiz" | "act" | "loading" | "reveal" | "result";
@@ -297,6 +298,7 @@ export default function Home() {
           const computed = calculateResult(nextAnswers);
           setResult(computed);
           setScreen("loading");
+          trackTestComplete(computed.primaryType);
         } catch {
           setScreen("quiz");
         }
@@ -342,7 +344,10 @@ export default function Home() {
             answeredCount={answeredCount}
             savedQuestionNumber={savedQuestionNumber}
             savedScreen={savedScreen}
-            onStart={startFresh}
+            onStart={() => {
+              trackTestStart();
+              startFresh();
+            }}
             onContinue={continueSaved}
           />
         )}
@@ -674,7 +679,12 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
           <p className="eyebrow"><span className="red-dot" /> SHAREABLE FILE</p>
           <h2 id="share-title">把这份档案带走</h2>
           <p>一张适合发出去的 3:4 花学档案卡，把你的类型和名场面带走。</p>
-          <a className="download-action" href={shareCardHref} download={`huaxue-test-${result.primaryType}.svg`}>下载 3:4 花学卡 <span>↘</span></a>
+          <a
+            className="download-action"
+            href={shareCardHref}
+            download={`huaxue-test-${result.primaryType}.svg`}
+            onClick={() => trackShareCard()}
+          >下载 3:4 花学卡 <span>↘</span></a>
           <p className="share-format-note">9:16 竖屏版本接口已预留 · 可直接使用结果页截图分享</p>
         </div>
       </section>
