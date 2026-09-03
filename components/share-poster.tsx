@@ -5,7 +5,7 @@ import QRCode from "qrcode";
 import type { Archetype } from "../data/archetypes";
 import { DIMENSIONS, DIMENSION_ORDER } from "../data/dimensions";
 import type { PersonalityResultContent } from "../data/results";
-import type { ArchetypeId, DimensionId, DimensionVector, VisualSymbol } from "../data/types";
+import type { DimensionId, DimensionVector, VisualSymbol } from "../data/types";
 
 const PAPER = "#f6f0e5";
 const PAPER_DEEP = "#e8dece";
@@ -20,16 +20,6 @@ const SYMBOL_PALETTES: Record<VisualSymbol, { accent: string; secondary: string;
   exit: { accent: "#9a6b38", secondary: "#778c68", wash: "#eee5d1" },
   repair: { accent: "#3f6978", secondary: "#b64c3e", wash: "#dfe9e8" },
   tourist: { accent: "#a85b3f", secondary: "#778c68", wash: "#eee7d5" },
-};
-
-const HEART_EYE_BALANCES: Record<ArchetypeId, string> = {
-  mao: "高配导航版",
-  xu: "算力全给关系",
-  ning: "有，但懒得藏",
-  zheng: "主要朝内",
-  chen: "看懂但不续费",
-  jing: "工程师版本",
-  yang: "拉完了",
 };
 
 interface SharePosterProps {
@@ -144,12 +134,51 @@ function QrCode({ value }: { value: string }) {
   );
 }
 
+export const PRODUCTION_TEST_URL = "https://benjamintay.github.io/huashao-personality-test/";
+
 export function getTestEntryUrl(): string {
-  if (typeof window === "undefined") return "https://benjamintay.github.io/huashao-personality-test/";
+  if (typeof window === "undefined") return PRODUCTION_TEST_URL;
+  const { hostname } = window.location;
+  const isLocalDev =
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "0.0.0.0" ||
+    hostname.endsWith(".local");
+  if (isLocalDev) return PRODUCTION_TEST_URL;
   const url = new URL(window.location.href);
   url.search = "";
   url.hash = "";
   return url.toString();
+}
+
+/** 将海报 SVG 渲染为 1080×1440 的 PNG Blob（用于移动端分享/保存）。 */
+export async function svgToPngBlob(svg: string): Promise<Blob> {
+  const image = new Image();
+  image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  await image.decode();
+  const canvas = document.createElement("canvas");
+  canvas.width = 1080;
+  canvas.height = 1440;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("无法创建画布上下文");
+  context.drawImage(image, 0, 0);
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, "image/png");
+  });
+  if (!blob) throw new Error("PNG 导出失败");
+  return blob;
+}
+
+/** 移动端主路径：优先 Web Share 直接分享 PNG；不可用时在新标签打开 PNG 供长按保存。 */
+export async function sharePosterAsImage(svg: string, fileName: string): Promise<void> {
+  const pngBlob = await svgToPngBlob(svg);
+  const file = new File([pngBlob], `${fileName}.png`, { type: "image/png" });
+  if (navigator.canShare?.({ files: [file] })) {
+    await navigator.share({ files: [file] });
+    return;
+  }
+  const pngUrl = URL.createObjectURL(pngBlob);
+  window.open(pngUrl, "_blank");
 }
 
 export function normalizeShareName(value: string): string {
@@ -217,7 +246,7 @@ export function buildSharePosterSvg(
     ${dimensionMarkup}
     <path d="M72 1030H1008" stroke="${INK}" stroke-opacity=".22"/>
     <text x="72" y="1080" fill="${palette.accent}" font-family="monospace" font-size="15" letter-spacing="3">心眼子余额 / HEART-EYE BALANCE</text>
-    <text x="72" y="1146" fill="${INK}" font-family="serif" font-size="43" font-weight="700">${escapeXml(HEART_EYE_BALANCES[archetype.id])}</text>
+    <text x="72" y="1146" fill="${INK}" font-family="serif" font-size="43" font-weight="700">${escapeXml(content.heartEyeBalance)}</text>
     ${heartLines.map((line, index) => `<text x="72" y="${1190 + index * 27}" fill="${MUTED}" font-family="serif" font-size="18">${escapeXml(line)}</text>`).join("")}
     <rect x="790" y="1080" width="218" height="260" fill="${PAPER_DEEP}" stroke="${INK}" stroke-opacity=".18"/>
     <rect x="806" y="1116" width="184" height="184" fill="${PAPER}"/>
@@ -232,7 +261,6 @@ export function buildSharePosterSvg(
 export function SharePoster({ archetype, content, displayScores, testUrl, displayName = "" }: SharePosterProps) {
   const palette = SYMBOL_PALETTES[archetype.visualSymbol];
   const topDimensions = getTopDimensionIds(displayScores);
-  const balance = HEART_EYE_BALANCES[archetype.id];
   const cleanName = normalizeShareName(displayName);
   const personalizedLabel = cleanName ? `${cleanName}，你的花少人格是` : "你的花少人格是";
   return (
@@ -279,7 +307,7 @@ export function SharePoster({ archetype, content, displayScores, testUrl, displa
       <div className="share-poster-bottom">
         <section className="share-poster-heart">
           <p className="share-poster-section-label">心眼子余额 / HEART-EYE</p>
-          <strong>{balance}</strong>
+          <strong>{content.heartEyeBalance}</strong>
           <p>{content.heartschemes}</p>
         </section>
         <section className="share-poster-qr-wrap">

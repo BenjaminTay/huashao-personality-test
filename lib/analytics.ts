@@ -70,3 +70,7 @@ export function trackTestComplete(primaryType: ArchetypeId): void {
 export function trackShareCard(): void {
   send({ event: true, path: "share-download", no_session: 1 });
 }
+
+export function trackShareImage(): void {
+  send({ event: true, path: "share-image", no_session: 1 });
+}

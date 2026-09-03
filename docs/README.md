@@ -18,9 +18,13 @@
 
 ~~~text
 app/                         页面、状态和用户交互
+components/                  结果页分享海报（预览 DOM、SVG 生成、PNG 分享）
 data/                        当前运行时使用的内容与模型输入
 lib/scoring.ts               当前运行时使用的计分实现
 lib/scoring.test.ts          计分和数据完整性的回归检查
+lib/analytics.ts             匿名事件埋点（GoatCounter，事件清单见隐私决策）
+data/population-stats.ts     “测友坐标”快照（由 workflow 自动生成，勿手改）
+scripts/sync-population.mjs  快照同步脚本（GoatCounter 事件 → data/）
 docs/design/                 视觉和交互规范
 docs/research/               事实材料、解释假设和待核验问题
 docs/decisions/              已做出的产品与技术选择
@@ -34,9 +38,12 @@ docs/archive/                历史路线，不得被运行时代码引用
 - data/questions.ts：24 道题、96 个选项、四幕和题库版本；
 - data/question-scoring.v3.ts：24×4 选项评分矩阵；
 - data/dimensions.ts：六维定义和展示标签；
-- data/archetypes.ts：七个人格原型坐标；
-- data/results.ts：固定结果文案、彩蛋和免责声明；
-- lib/scoring.ts：展示分、主型/副型/最不像和证据生成。
+- data/archetypes.ts：七个人格原型坐标与 `visualSymbol`；
+- data/results.ts：固定结果文案、`heartEyeBalance`、彩蛋和免责声明；
+- data/population-stats.ts：测友坐标快照，生成方式见 scripts/sync-population.mjs；
+- components/share-poster.tsx：分享海报的唯一实现，内容只读 data/；
+- lib/scoring.ts：展示分、主型/副型/最不像和证据生成；
+- lib/analytics.ts：匿名事件埋点，只携带事件与主型。
 
 研究文档解释材料来源和推导过程，不会自动成为产品事实；归档文档也不应重新进入 data/ 或页面 import。
 
@@ -48,7 +55,7 @@ docs/archive/                历史路线，不得被运行时代码引用
 | 六维模型 | Dimension Model v2.0 |
 | 七人格坐标 | Archetype Profiles v2.0 |
 | 分类器 | Calibrated Item-Profile Matching v3.0 |
-| 结果文案 | Result System v1.0 |
+| 结果文案 | Result System v1.1 |
 
 ## 目录说明
 
@@ -86,6 +93,8 @@ docs/archive/                历史路线，不得被运行时代码引用
 | --- | --- |
 | 题目、选项、维度、人格或结果文案 | data/、对应测试、版本说明和相关决策文档 |
 | 计分、匹配或证据逻辑 | lib/scoring.ts、lib/scoring.test.ts、评分决策文档 |
+| 埋点事件、样本口径或快照流程 | lib/analytics.ts、scripts/sync-population.mjs、.github/workflows/、结果系统隐私决策文档 |
+| 分享海报的布局或生成 | components/share-poster.tsx、share-poster.test.ts，内容仍来自 data/ |
 | 页面结构、视觉、动效或无障碍 | app/、docs/design/视觉与页面规范.md，必要时补 UI 验证 |
 | 新研究材料 | docs/research/，记录来源、日期、层级、支持内容和局限 |
 | 已废弃路线 | docs/archive/，并确认运行时代码没有引用 |

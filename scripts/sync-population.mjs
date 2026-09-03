@@ -58,6 +58,9 @@ if (!response.ok) {
 }
 
 const data = await response.json();
+// GoatCounter /stats/hits 默认按 path 聚合：每个 path 只有一行，count 是所选日期
+// 范围内的总和（按天/小时拆分的数据在 hit.stats 子数组里），因此直接覆盖即可，
+// 不需要跨行累加。若未来需要逐日曲线再改用 daily=true 并做累加。
 const countsByPath = new Map(
   (data.hits ?? []).filter((hit) => hit.event).map((hit) => [hit.path, hit.count ?? 0]),
 );

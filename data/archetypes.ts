@@ -49,7 +49,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     name: "郑爽",
     personName: "郑爽型",
     englishName: "ZHENG TYPE",
-    title: "人际系统自动自检员",
+    title: "关系责任自检员",
     strategy: "问题一出现，先检查自己",
     visualSymbol: "error-log",
     coordinates: { R: 4.5, S: 3.2, B: 1.7, D: 2.5, G: 3.2, I: 4.8 },

@@ -11,12 +11,18 @@ import {
 import type { ArchetypeId, OptionId } from "../data/types";
 import { POPULATION_SNAPSHOT } from "../data/population-stats";
 import { calculateResult } from "../lib/scoring";
-import { trackShareCard, trackTestComplete, trackTestStart } from "../lib/analytics";
+import {
+  trackShareCard,
+  trackShareImage,
+  trackTestComplete,
+  trackTestStart,
+} from "../lib/analytics";
 import type { AnswerMap, ComputedResult } from "../types";
 import {
   buildSharePosterSvg,
   getTestEntryUrl,
   normalizeShareName,
+  sharePosterAsImage,
   SharePoster,
 } from "../components/share-poster";
 
@@ -718,7 +724,20 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
             download={`huaxue-share-poster-${result.primaryType}.svg`}
             onClick={() => trackShareCard()}
           >下载{cleanShareName ? ` ${cleanShareName}的` : "我的"} 3:4 海报 <span>↘</span></a>
-          <p className="share-format-note">独立海报布局 · SVG 矢量下载 · 二维码指向当前测试入口</p>
+          <button
+            className="download-action share-image-action"
+            type="button"
+            onClick={() => {
+              trackShareImage();
+              void sharePosterAsImage(
+                shareCardSvg,
+                `huaxue-share-poster-${result.primaryType}`,
+              ).catch(() => {
+                // 分享被取消或导出失败时静默：保留 SVG 下载路径
+              });
+            }}
+          >分享/保存成图片 <span>↗</span></button>
+          <p className="share-format-note">SVG 无损下载 · 移动端可分享/保存 PNG 图片 · 二维码指向当前测试入口</p>
         </div>
       </section>
 

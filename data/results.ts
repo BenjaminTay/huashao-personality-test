@@ -1,14 +1,11 @@
 import type { ArchetypeId, DimensionId } from "./types";
 
-export const RESULT_CONTENT_VERSION = "1.0";
+export const RESULT_CONTENT_VERSION = "1.1";
 
 export const RESULT_DISCLAIMER =
   "本结果是《花少2》节目呈现与互联网花学共同塑造的娱乐人格原型，不等同于对现实真人的心理诊断，也不代表完整、客观的真人性格。";
 
 export interface PersonalityResultContent {
-  archetypeId: ArchetypeId;
-  name: string;
-  title: string;
   punchline: string;
   core: string;
   profile: Record<DimensionId, string>;
@@ -18,12 +15,12 @@ export interface PersonalityResultContent {
   misunderstoodExplain: string;
   keywords: string[];
   heartschemes: string;
+  heartEyeBalance: string;
   share: string;
 }
 
 export const RESULT_CONTENT: Record<ArchetypeId, PersonalityResultContent> = {
   mao: {
-    archetypeId: "mao", name: "毛阿敏", title: "人际关系导航仪",
     punchline: "你不是特别爱研究别人。你只是通常比别人更早发现：这个局已经和五分钟前不一样了。",
     core: "先看懂关系怎么变，再决定自己怎么相处。",
     profile: { R: "中高｜你在意关系，但通常不会只沉浸在自己的感受里。", S: "很高｜很多人需要别人说明白，你往往已经从前后变化里读到一些东西。", B: "中高｜你能理解别人，但不太容易把所有人的问题都变成自己的责任。", D: "偏低｜你不一定第一时间把判断全部说出来。", G: "中等｜你能处理局，但不一定觉得每个局都必须由你负责。", I: "偏低｜事情不对时，你更容易先看发生了什么，而不是马上认定“是不是我的错”。" },
@@ -31,11 +28,11 @@ export const RESULT_CONTENT: Record<ArchetypeId, PersonalityResultContent> = {
     bug: "因为你太容易看见关系变化，所以有时候会调整得比表达得快。你心里已经重新判断完这个局了，别人却可能还不知道“所以你到底怎么想？”你的适应能力，偶尔会被别人理解成真实立场不够明确。",
     misunderstood: "很会算。", misunderstoodExplain: "更准确的说法可能是：你不喜欢只用一句漂亮话理解复杂关系。",
     keywords: ["读局", "关系地图", "看情况", "人际导航"],
+    heartEyeBalance: "高配导航版",
     heartschemes: "高配导航版。不是每一颗都拿来害人，主要拿来确认现在到底是什么情况。",
     share: "别人还在问：“发生什么了吗？”我已经在重新画关系图了。",
   },
   xu: {
-    archetypeId: "xu", name: "许晴", title: "关系纯度检测仪",
     punchline: "你不是不能接受关系变了。你更难接受的是：明明已经变了，却还要一起演什么都没变。",
     core: "关系可以变化，但最好是真的。",
     profile: { R: "很高｜重要关系没有处理完，很难真正退出你的注意力。", S: "高｜关系中的细微变化你通常感受得到。", B: "偏低｜重要的人不开心，很难做到完全和自己无关。", D: "高｜到了真的在意的时候，你更愿意把问题说出来。", G: "偏低｜你更关心关系是不是真的，而不是整个群体是否继续顺利运转。", I: "中等｜你会反思自己，但重点通常不是“都是我的错”，而是“我们的关系发生了什么”。" },
@@ -43,11 +40,11 @@ export const RESULT_CONTENT: Record<ArchetypeId, PersonalityResultContent> = {
     bug: "别人有时只是状态变化、生活变忙或社交方式变了，你却可能更容易感觉成“我们的关系是不是变了？”你有时候会要求关系给出一个它暂时给不了的明确答案。",
     misunderstood: "太作 / 太在意。", misunderstoodExplain: "另一面是：你很少把真正重要的关系当成可有可无。",
     keywords: ["关系特殊性", "求真", "不愿演", "关系洁癖"],
+    heartEyeBalance: "算力全给关系",
     heartschemes: "算力基本全给关系了。不是拿来宫斗，拿来反复确认：“所以我们现在到底算什么？”",
     share: "关系变了可以。别让我最后一个知道。",
   },
   ning: {
-    archetypeId: "ning", name: "宁静", title: "边界主权持有人",
     punchline: "你可以理解别人的情绪，但理解不等于自动接管。",
     core: "我的需求我说，你的问题你也得自己负责。",
     profile: { R: "中等｜关系重要，但不容易无限侵入你的生活。", S: "中高｜你不是看不懂，只是不一定愿意一直猜。", B: "很高｜这是你的核心特征。", D: "很高｜能说清楚的事情，你通常更愿意说清楚。", G: "中低｜你可以帮，但不默认所有问题都由你解决。", I: "很低｜别人不开心，不自动证明你做错了。" },
@@ -55,11 +52,11 @@ export const RESULT_CONTENT: Record<ArchetypeId, PersonalityResultContent> = {
     bug: "高边界也有代价。有时候别人真正需要的不是一个正确边界，而是一点缓冲、陪伴和“我知道你现在不好受”。你的边界有时候划得比关系恢复得快。",
     misunderstood: "强势。", misunderstoodExplain: "更多时候是：你不喜欢通过委屈自己来维持和平。",
     keywords: ["明牌", "边界", "直球", "不替别人背"],
+    heartEyeBalance: "有，但懒得藏",
     heartschemes: "有，但懒得藏。可以直接说的事情，为什么还要演三集？",
     share: "你的情绪我可以理解。但先别急着登记到我名下。",
   },
   zheng: {
-    archetypeId: "zheng", name: "郑爽", title: "关系责任自检员",
     punchline: "事情甚至还没证明跟你有关，你已经开始检查自己有没有哪里没做好。",
     core: "关系出问题 → 先检查自己的责任。",
     profile: { R: "高｜关系问题很难完全当作背景噪声。", S: "中等｜你会感受到变化，但不一定总能准确知道原因。", B: "偏低｜别人的状态很容易进入你的责任范围。", D: "中低｜很多东西会先在自己内部处理。", G: "中等｜你愿意补救，尤其当你觉得自己有责任。", I: "很高｜这是核心指标。" },
@@ -67,11 +64,11 @@ export const RESULT_CONTENT: Record<ArchetypeId, PersonalityResultContent> = {
     bug: "你的责任雷达有时候范围太大。别人状态不好、群体气氛变了、有人突然不联系，你都可能先问“是不是我？”很多问题其实还没有完成责任认定，你已经先把自己叫去问话了。",
     misunderstood: "想太多。", misunderstoodExplain: "真正的问题不是你没有责任感，而是你偶尔分不清“我在乎”与“这是我的责任”。",
     keywords: ["担责", "自查", "关系卷入", "先反省自己"],
+    heartEyeBalance: "主要朝内",
     heartschemes: "主要朝内。别人拿心眼子研究别人，你拿来研究：“我是不是哪里又没做好？”",
     share: "问题还没开始追责。我已经提交自查报告了。",
   },
   chen: {
-    archetypeId: "chen", name: "陈意涵", title: "幸福者退让",
     punchline: "你不是看不懂这个局。你只是经常觉得：赢这个局不一定值得。",
     core: "看懂发生了什么，再决定值不值得继续投入。",
     profile: { R: "偏低｜关系重要，但不容易无限霸占你的生活。", S: "中等｜通常不是看不见，而是不一定继续追。", B: "高｜你比较能区分别人的问题和自己的生活。", D: "中等｜值得谈的可以谈，不值得的未必开启大会。", G: "低｜你很少觉得所有局都必须修好。", I: "低｜不容易第一时间把事情归到自己。" },
@@ -79,11 +76,11 @@ export const RESULT_CONTENT: Record<ArchetypeId, PersonalityResultContent> = {
     bug: "“算了”并不总等于“真的过去了”。不值得聊说多了以后，也可能变成什么都不聊。你可以很快从一个不舒服的局里退出，但关系里的另一个人可能根本不知道你其实受过伤。有些关系不是解决了，只是自然停更。",
     misunderstood: "没心没肺。", misunderstoodExplain: "更准确的是：你对自己的快乐有比较高的保护优先级。",
     keywords: ["退局", "快乐优先", "恢复快", "幸福者退让"],
+    heartEyeBalance: "看懂但不续费",
     heartschemes: "看懂了，但不一定续费。有些局可以分析，有些局：我先去吃饭。",
     share: "不是没看懂。只是想了一下：好像没必要把今天赔进去。",
   },
   jing: {
-    archetypeId: "jing", name: "井柏然", title: "公共关系维修工",
     punchline: "这件事本来不归你管。十分钟以后，你已经开始想怎么让所有人重新正常说话了。",
     core: "系统出问题 → 先想怎么让它重新运转。",
     profile: { R: "中等｜你会在意，但更多转化成行动。", S: "高｜需要先知道每个人到底是什么状态。", B: "中等｜别人问题不完全是你的，但很容易进入你的处理范围。", D: "中等｜你不一定最直接，但通常愿意推动沟通。", G: "很高｜这是核心指标。", I: "中等｜事情出问题时会承担，但重点通常是解决。" },
@@ -91,11 +88,11 @@ export const RESULT_CONTENT: Record<ArchetypeId, PersonalityResultContent> = {
     bug: "为什么所有人的关系最后都变成你的工作？两个人第三次闹矛盾你还在帮，一个群体没人负责你接，大家互相不沟通你安排。最后可能别人关系解决了，你的电没了。真正需要练习的是判断哪些东西根本不应该由你修。",
     misunderstood: "爱管事。", misunderstoodExplain: "更多时候是：你对失控和低效的群体状态容忍度比较低。",
     keywords: ["修局", "调停", "组织", "公共情绪客服"],
+    heartEyeBalance: "工程师版本",
     heartschemes: "工程师版本。别人拿来站队，你拿来排查：到底是哪一个环节又坏了？",
     share: "本来只是来参加活动。最后莫名其妙成了现场负责人。",
   },
   yang: {
-    archetypeId: "yang", name: "杨洋", title: "真的来旅游的人",
     punchline: "别人已经进入第三轮关系分析了，你还在想：TA不是已经说没事了吗？",
     core: "先相信明确的信息，不默认所有行为都有隐藏剧情。",
     profile: { R: "低｜关系里的小变化不容易长期霸占注意力。", S: "很低｜这是最鲜明的特征。", B: "高｜别人表达出来的需求，你更愿意按照它本身尊重。", D: "中等｜有事情可以说，不太喜欢无限猜。", G: "偏低｜没明确需要你处理时，你通常不会自动接手。", I: "低｜别人状态变化不会马上被解释成自己的问题。" },
@@ -103,6 +100,7 @@ export const RESULT_CONTENT: Record<ArchetypeId, PersonalityResultContent> = {
     bug: "潜台词有时候真的存在。如果一个人嘴上说“没关系”，但连续几次行为已经明显变化，你可能还是比较晚才意识到TA真的介意。你的问题不是笨，而是默认相信显式信息，有时候会错过已经很明显的关系信号。",
     misunderstood: "没心眼。", misunderstoodExplain: "更准确：你的潜台词默认值比较低。",
     keywords: ["低博弈", "字面理解", "不脑补", "真的来旅游"],
+    heartEyeBalance: "拉完了",
     heartschemes: "拉完了。特别说明：这不是最低分，这是另一个运行模式。",
     share: "心眼子余额：拉完了。恭喜。你可能只是那个真的来旅游的人。",
   },

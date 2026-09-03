@@ -1100,3 +1100,12 @@ button:disabled { cursor: not-allowed; }
   .share-poster { width: min(100%, 380px); box-shadow: 7px 8px 0 rgba(213, 200, 180, .7); }
   .share-section { align-items: start; }
 }
+
+.share-image-action { margin-top: 10px; }
+button.download-action {
+  appearance: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
