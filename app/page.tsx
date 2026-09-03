@@ -10,7 +10,7 @@ import {
 } from "../data/results";
 import type { ArchetypeId, OptionId } from "../data/types";
 import { POPULATION_SNAPSHOT } from "../data/population-stats";
-import { calculateResult } from "../lib/scoring";
+import { calculateResult, getQuestionContribution } from "../lib/scoring";
 import {
   trackShareCard,
   trackShareImage,
@@ -25,6 +25,7 @@ import {
   sharePosterAsImage,
   SharePoster,
 } from "../components/share-poster";
+import { ResultPreviewBar } from "../components/result-preview-bar";
 
 type Screen = "home" | "quiz" | "act" | "loading" | "reveal" | "result";
 
@@ -37,7 +38,6 @@ const LOADING_LINES = [
   "正在生成你的花少2人格档案……",
   "马上就好……",
 ];
-
 const HOME_SUBTITLES = [
   "看看你在旅行团里通常是什么位置。",
   "测测你遇到复杂关系时会怎么处理。",
@@ -138,6 +138,27 @@ function formatQuestionNumber(value: string | number): string {
   return String(value).replace(/^Q/, "").padStart(2, "0");
 }
 
+/**
+ * 本地验收用：为指定人格生成"全程选最贴近该型选项"的 24 题答案路径，
+ * 与模型诊断里的自洽路径口径一致（主型必然回到自身）。不手写 mock 答案。
+ */
+function buildTypeAnswers(type: ArchetypeId): AnswerMap {
+  const answers: AnswerMap = {};
+  for (const question of QUESTIONS) {
+    let bestOption = question.options[0].id;
+    let bestScore = Number.NEGATIVE_INFINITY;
+    for (const option of question.options) {
+      const score = getQuestionContribution(type, question.id, option.id);
+      if (score > bestScore) {
+        bestScore = score;
+        bestOption = option.id;
+      }
+    }
+    answers[question.id] = bestOption;
+  }
+  return answers;
+}
+
 export default function Home() {
   const [screen, setScreen] = useState<Screen>("home");
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -148,13 +169,35 @@ export default function Home() {
   const [hasSavedProgress, setHasSavedProgress] = useState(false);
   const [savedScreen, setSavedScreen] = useState<Screen>("quiz");
   const [loadingIndex, setLoadingIndex] = useState(0);
+  const [homeSubtitle, setHomeSubtitle] = useState(HOME_SUBTITLES[0]);
+  const [previewType, setPreviewType] = useState<ArchetypeId | null>(null);
+  const [previewEnabled, setPreviewEnabled] = useState(false);
+  const previewBackup = useRef<{
+    answers: AnswerMap;
+    currentIndex: number;
+    screen: Screen;
+    result: ComputedResult | null;
+  } | null>(null);
   const transitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currentQuestion = QUESTIONS[currentIndex];
   const currentAct = ACTS.find((act) => act.act === currentQuestion?.act) ?? ACTS[0];
   const answeredCount = Object.keys(answers).length;
   const savedQuestionNumber = currentQuestion?.id ?? "Q01";
-  const homeSubtitle = HOME_SUBTITLES[0];
+
+  useEffect(() => {
+    setHomeSubtitle(
+      HOME_SUBTITLES[Math.floor(Math.random() * HOME_SUBTITLES.length)],
+    );
+  }, []);
+
+  useEffect(() => {
+    const devServer = process.env.NODE_ENV === "development";
+    const hasPreviewFlag =
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).has("preview");
+    setPreviewEnabled(devServer || hasPreviewFlag);
+  }, []);
 
   useEffect(() => {
     const session = readSession();
@@ -178,7 +221,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || previewType) return;
 
     try {
       window.localStorage.setItem(
@@ -193,7 +236,7 @@ export default function Home() {
     } catch {
       // Private browsing and storage quotas should not interrupt the quiz.
     }
-  }, [answers, currentIndex, hydrated, screen]);
+  }, [answers, currentIndex, hydrated, previewType, screen]);
 
   useEffect(() => {
     return () => {
@@ -252,6 +295,39 @@ export default function Home() {
     setPendingOption(null);
     setSavedScreen("quiz");
     setScreen("home");
+  }
+
+  function enterPreview(type: ArchetypeId) {
+    if (transitionTimer.current) clearTimeout(transitionTimer.current);
+    if (!previewBackup.current) {
+      previewBackup.current = { answers, currentIndex, screen, result };
+    }
+    const answersForType = buildTypeAnswers(type);
+    try {
+      const computed = calculateResult(answersForType);
+      setPendingOption(null);
+      setAnswers(answersForType);
+      setCurrentIndex(QUESTIONS.length - 1);
+      setResult(computed);
+      setPreviewType(type);
+      setScreen("result");
+    } catch {
+      // 数据异常时保持当前画面，不打断用户
+    }
+  }
+
+  function exitPreview() {
+    setPreviewType(null);
+    const backup = previewBackup.current;
+    previewBackup.current = null;
+    if (backup) {
+      setAnswers(backup.answers);
+      setCurrentIndex(backup.currentIndex);
+      setResult(backup.result);
+      setScreen(backup.screen);
+    } else {
+      setScreen("home");
+    }
   }
 
   function chooseOption(optionId: OptionId) {
@@ -353,6 +429,13 @@ export default function Home() {
         )}
       </div>
 
+      {previewEnabled && (
+        <ResultPreviewBar
+          active={previewType}
+          onPick={enterPreview}
+          onExit={exitPreview}
+        />
+      )}
     </main>
   );
 }
@@ -524,7 +607,7 @@ function LoadingScreen({ line, onSkip }: { line: string; onSkip: () => void }) {
       <div className="scanner" aria-hidden="true"><span /><span /><span /></div>
       <p className="loading-kicker">HUAXUE TEST PROCESSING</p>
       <h1>{line}</h1>
-      <p className="loading-small">正在整理 24 次现场反应，马上出结果。</p>
+      <p className="loading-small">24 次选择，正在归档成一份花学档案。</p>
       <button className="skip-action" type="button" onClick={onSkip}>跳过等待 →</button>
     </section>
   );
@@ -585,39 +668,39 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
         <p className="result-english">{primary.englishName}</p>
         <h1 id="result-title">{primary.personName}</h1>
         <p className="result-type-title">{primary.title}</p>
+        <p className="result-punchline">{content.punchline}</p>
         <div className="result-scene-quote">
-          <span>花少2 / 花学档案文案</span>
+          <span>花少2 / 档案台词</span>
           <blockquote>“{content.share}”</blockquote>
         </div>
-        <p className="result-punchline">{content.punchline}</p>
-        <div className="result-strategy"><span>YOUR DEFAULT STRATEGY</span><strong>{primary.strategy}</strong></div>
+        <div className="result-strategy"><span>花学默认姿势</span><strong>{primary.strategy}</strong></div>
       </div>
 
       <section className="result-section dimension-section" aria-labelledby="dimensions-title">
-        <div className="section-heading"><div><p className="eyebrow"><span className="red-dot" /> FIELD READOUT 01</p><h2 id="dimensions-title">六维关系画像</h2></div><span className="score-note">展示分 / 0—100</span></div>
+        <div className="section-heading"><div><p className="eyebrow"><span className="red-dot" /> 属性面板</p><h2 id="dimensions-title">关系属性面板</h2></div><span className="score-note">0—100 · 按 24 次选择换算</span></div>
         <div className="dimension-grid">
           {DIMENSION_ORDER.map((dimension) => {
             const definition = DIMENSIONS[dimension];
             const score = result.sixDimensionProfile[dimension];
             return (
               <article className="dimension-card" key={dimension}>
-                <div className="dimension-card-head"><span className="dimension-id">{dimension}</span><strong>{definition.displayName}</strong><b>{score}</b></div>
+                <div className="dimension-card-head"><strong>{definition.displayName}</strong><b>{score}</b></div>
                 <p>{definition.description}</p>
-                <div className="score-bar" role="img" aria-label={`${definition.displayName}展示分 ${score} 分`}><span style={{ width: `${score}%` }} /></div>
+                <div className="score-bar" role="img" aria-label={`${definition.displayName} ${score} 分`}><span style={{ width: `${score}%` }} /></div>
                 <div className="score-labels"><span>{definition.lowLabel}</span><span>{definition.highLabel}</span></div>
               </article>
             );
           })}
         </div>
-        <p className="score-footnote">本次现场读数</p>
+        <p className="score-footnote">属性点只反映你这次的选择，不给你下定义——留着跟朋友互相伤害用。</p>
       </section>
 
       <section className="result-section core-section" aria-labelledby="core-title">
         <div className="core-layout">
           <div className="core-stamp" aria-hidden="true">S02<br /><strong>LOG</strong></div>
           <div>
-            <p className="eyebrow"><span className="red-dot" /> 你的相处方式 / RELATION NOTE</p>
-            <h2 id="core-title">核心算法</h2>
+            <p className="eyebrow"><span className="red-dot" /> 人格说明书</p>
+            <h2 id="core-title">出厂人设</h2>
             <p className="core-analysis">{content.core}</p>
             <p className="misunderstood-note"><span>最容易被误会成</span>{content.misunderstood} {content.misunderstoodExplain}</p>
           </div>
@@ -625,70 +708,46 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
       </section>
 
       <section className="result-section evidence-section" aria-labelledby="evidence-title">
-        <div className="section-heading"><div><p className="eyebrow"><span className="red-dot" /> FIELD READOUT 02</p><h2 id="evidence-title">为什么是你</h2></div><span className="evidence-count">3 RECORDS</span></div>
+        <div className="section-heading"><div><p className="eyebrow"><span className="red-dot" /> 答案实锤</p><h2 id="evidence-title">最锤你的三题</h2></div><span className="evidence-count">你的原话 · 一字未改</span></div>
         <div className="evidence-list">
           {result.topEvidenceQuestions.map((evidence, index) => (
             <article className="evidence-card" key={`${evidence.questionId}-${evidence.optionId}`}>
               <div className="evidence-mark">0{index + 1}</div>
-              <div><p className="evidence-question">Q{formatQuestionNumber(evidence.questionId)} / {evidence.questionTitle} · 选择 {evidence.optionId}</p><p>{evidence.optionText}</p></div>
+              <div><p className="evidence-question">Q{formatQuestionNumber(evidence.questionId)} / {evidence.questionTitle} · 你选了 {evidence.optionId}</p><p>“{evidence.optionText}”</p></div>
             </article>
           ))}
         </div>
       </section>
 
       <section className="result-section split-section" aria-label="高光面与花少 BUG">
-        <article className="side-card bright-card"><p className="eyebrow"><span className="green-dot" /> HIGH LIGHT</p><h2>Bright Side</h2><p>{content.bright}</p></article>
-        <article className="side-card bug-card"><p className="eyebrow"><span className="red-dot" /> FLOWER BUG</p><h2>花少 Bug</h2><p>{content.bug}</p></article>
+        <article className="side-card bright-card"><p className="eyebrow"><span className="green-dot" /> 高光面</p><h2>高光时刻</h2><p>{content.bright}</p></article>
+        <article className="side-card bug-card"><p className="eyebrow"><span className="red-dot" /> Bug 报告</p><h2>花少 Bug</h2><p>{content.bug}</p></article>
       </section>
 
       <section className="result-section cast-section" aria-labelledby="cast-title">
-        <div className="section-heading"><div><p className="eyebrow"><span className="red-dot" /> RELATION MAP</p><h2 id="cast-title">你的其他坐标</h2></div></div>
+        <div className="section-heading"><div><p className="eyebrow"><span className="red-dot" /> 副本与对家</p><h2 id="cast-title">隐藏款和绝缘款</h2></div></div>
         <div className="cast-grid">
-          <article className="cast-card secondary-card"><span className="cast-label">副型 / SECONDARY</span><h3>{secondary.personName}</h3><p>{secondary.title}</p><div className="cast-strategy">更接近：{secondary.strategy}</div><small>{secondaryContent.keywords.join(" · ")}</small></article>
-          <article className="cast-card least-card"><span className="cast-label">最不像 / LEAST LIKE</span><h3>{leastLike.personName}</h3><p>{leastLike.title}</p><div className="cast-strategy">相反方向：{leastLike.strategy}</div></article>
+          <article className="cast-card secondary-card"><span className="cast-label">隐藏款 / 你也会这一套</span><h3>{secondary.personName}</h3><p>{secondary.title}</p><div className="cast-strategy">备用模式：{secondary.strategy}</div><small>{secondaryContent.keywords.join(" · ")}</small></article>
+          <article className="cast-card least-card"><span className="cast-label">绝缘款 / 对不上的型号</span><h3>{leastLike.personName}</h3><p>{leastLike.title}</p><div className="cast-strategy">隔着一整条地铁线：{leastLike.strategy}</div></article>
         </div>
-      </section>
-
-      <section className="result-section sample-section" aria-labelledby="sample-title">
-        <div className="section-heading">
-          <div><p className="eyebrow"><span className="red-dot" /> GROUP SAMPLE / 匿名样本</p><h2 id="sample-title">测友坐标</h2></div>
-          <span className="score-note">{sampleDate ? `截至 ${sampleDate}` : "等待首次采集"}</span>
-        </div>
-        {sampleTotal > 0 ? (
-          <>
-            <p className="sample-lead">
-              {sampleShowPercent
-                ? `已有 ${formatSampleCount(sampleTotal)} 人次完成鉴定，其中 ${ownSamplePercent.toFixed(1)}% 与你同为 ${primary.personName}。`
-                : `目前有 ${formatSampleCount(sampleTotal)} 人次完成鉴定，样本还在积累中——把档案卡发出去，让分母变大。`}
-            </p>
-            <div className="sample-list">
-              {(Object.keys(ARCHETYPES) as ArchetypeId[]).map((id) => {
-                const count = POPULATION_SNAPSHOT.completions[id];
-                const percent = getSamplePercent(count, sampleTotal);
-                const isOwn = id === result.primaryType;
-                return (
-                  <div className={`sample-row${isOwn ? " is-own" : ""}`} key={id}>
-                    <span className="sample-name">{ARCHETYPES[id].personName}</span>
-                    <div className="score-bar" role="img" aria-label={`${ARCHETYPES[id].personName} ${formatSampleCount(count)} 人次`}>
-                      <span style={{ width: count > 0 ? `${Math.max(percent, 3)}%` : "0%" }} />
-                    </div>
-                    <span className="sample-num">
-                      {formatSampleCount(count)}
-                      {sampleShowPercent && <i>{percent.toFixed(1)}%</i>}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-            <p className="score-footnote">口径：完成全部 24 题计 1 人次 · 只统计主型 · 匿名聚合，不含任何答题内容 · 每日更新</p>
-          </>
-        ) : (
-          <p className="sample-empty">样本还没开张：你是第一位完成鉴定的吗？把档案卡发给朋友，让“测友坐标”长出来。</p>
-        )}
       </section>
 
       <section className="result-section meme-section" aria-label="花学彩蛋">
         <div className="meme-block"><p className="eyebrow"><span className="red-dot" /> HEART-EYE BALANCE / 花学批注</p><h2>心眼子状态</h2><p>{content.heartschemes}</p></div>
+      </section>
+
+      <section className="result-section recall-section" aria-labelledby="recall-title">
+        <div className="section-heading">
+          <div><p className="eyebrow"><span className="red-dot" /> 花学考古 / DIG SITE</p><h2 id="recall-title">名场面回响</h2></div>
+          <span className="score-note">互联网考古现场</span>
+        </div>
+        <figure className="recall-card">
+          <blockquote>“{content.recall.quote}”</blockquote>
+          <figcaption>
+            <span className="recall-source">{content.recall.source}</span>
+            <p className="recall-note">{content.recall.note}</p>
+          </figcaption>
+        </figure>
       </section>
 
       <section className="result-section share-section" aria-labelledby="share-title">
@@ -700,7 +759,7 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
           displayName={cleanShareName}
         />
         <div className="share-copy-block">
-          <p className="eyebrow"><span className="red-dot" /> SHAREABLE FILE</p>
+          <p className="eyebrow"><span className="red-dot" /> 分享现场</p>
           <h2 id="share-title">把这张海报带走</h2>
           <p>填写姓名后，海报会显示“XXX，你的花少人格是”。</p>
           <div className="share-personalize">
@@ -737,8 +796,46 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
               });
             }}
           >分享/保存成图片 <span>↗</span></button>
-          <p className="share-format-note">SVG 无损下载 · 移动端可分享/保存 PNG 图片 · 二维码指向当前测试入口</p>
+          <p className="share-format-note">下载原图，或手机直接存图分享 · 二维码就是本测试入口</p>
         </div>
+      </section>
+
+      <section className="result-section sample-section" aria-labelledby="sample-title">
+        <div className="section-heading">
+          <div><p className="eyebrow"><span className="red-dot" /> 测友坐标 / 同好分布</p><h2 id="sample-title">一起测过的朋友</h2></div>
+          <span className="score-note">{sampleDate ? `截至 ${sampleDate}` : "等待首次采集"}</span>
+        </div>
+        {sampleTotal > 0 ? (
+          <>
+            <p className="sample-lead">
+              {sampleShowPercent
+                ? `已有 ${formatSampleCount(sampleTotal)} 人次完成鉴定，其中 ${ownSamplePercent.toFixed(1)}% 和你同为 ${primary.personName}。`
+                : `目前有 ${formatSampleCount(sampleTotal)} 人次完成鉴定，样本还在积累中——把档案卡发出去，让分母变大。`}
+            </p>
+            <div className="sample-list">
+              {(Object.keys(ARCHETYPES) as ArchetypeId[]).map((id) => {
+                const count = POPULATION_SNAPSHOT.completions[id];
+                const percent = getSamplePercent(count, sampleTotal);
+                const isOwn = id === result.primaryType;
+                return (
+                  <div className={`sample-row${isOwn ? " is-own" : ""}`} key={id}>
+                    <span className="sample-name">{ARCHETYPES[id].personName}</span>
+                    <div className="score-bar" role="img" aria-label={`${ARCHETYPES[id].personName} ${formatSampleCount(count)} 人次`}>
+                      <span style={{ width: count > 0 ? `${Math.max(percent, 3)}%` : "0%" }} />
+                    </div>
+                    <span className="sample-num">
+                      {formatSampleCount(count)}
+                      {sampleShowPercent && <i>{percent.toFixed(1)}%</i>}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="score-footnote">按人次统计 · 只记录主型 · 匿名聚合 · 每日更新</p>
+          </>
+        ) : (
+            <p className="sample-empty">样本还没开张：你是第一位完成鉴定的吗？把档案卡发给朋友，让“测友坐标”长出来。</p>
+          )}
       </section>
 
       <div className="result-disclaimer"><strong>娱乐原型说明</strong><p>{RESULT_DISCLAIMER}</p></div>

@@ -213,7 +213,7 @@ export function buildSharePosterSvg(
     const x = index === 0 ? 72 : 548;
     const barWidth = 340;
     return `<g>
-      <text x="${x}" y="922" fill="${MUTED}" font-family="monospace" font-size="16" letter-spacing="2">${dimension} / ${escapeXml(definition.displayName)}</text>
+      <text x="${x}" y="922" fill="${MUTED}" font-family="monospace" font-size="16" letter-spacing="2">${escapeXml(definition.displayName)}</text>
       <text x="${x + 410}" y="922" fill="${palette.accent}" font-family="monospace" font-size="24" text-anchor="end">${score}</text>
       <rect x="${x}" y="944" width="${barWidth}" height="10" fill="${PAPER_DEEP}"/>
       <rect x="${x}" y="944" width="${Math.max(8, barWidth * score / 100)}" height="10" fill="${palette.secondary}"/>
@@ -297,7 +297,7 @@ export function SharePoster({ archetype, content, displayScores, testUrl, displa
             const score = displayScores[dimension];
             return (
               <div className="share-poster-dimension" key={dimension}>
-                <div><span>{dimension} / {definition.displayName}</span><strong>{score}</strong></div>
+                <div><span>{definition.displayName}</span><strong>{score}</strong></div>
                 <span className="share-poster-mini-bar"><i style={{ width: `${score}%` }} /></span>
               </div>
             );

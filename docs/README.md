@@ -14,6 +14,7 @@
 | 人格分布优化的基线与路线图 | [decisions/人格分布优化-诊断基线原则与路线图.md](decisions/人格分布优化-诊断基线原则与路线图.md) |
 | Question Set v3.1 评分矩阵合入记录 | [decisions/QuestionSet-v3.1-评分矩阵提案.md](decisions/QuestionSet-v3.1-评分矩阵提案.md) |
 | Archetype Coordinates v2.1 坐标合入记录 | [decisions/ArchetypeCoordinates-v2.1-提案.md](decisions/ArchetypeCoordinates-v2.1-提案.md) |
+| Result System v2 梗感改版与 Question Set v3.2 勘误 | [decisions/ResultSystem-v2-梗感改版与QuestionSet-v3.2勘误.md](decisions/ResultSystem-v2-梗感改版与QuestionSet-v3.2勘误.md) |
 | 研究材料和来源 | [research/](research/) |
 | 已废弃方案 | [archive/README.md](archive/README.md) |
 
@@ -42,7 +43,7 @@ docs/archive/                历史路线，不得被运行时代码引用
 - data/question-scoring.v3.ts：24×4 选项评分矩阵；
 - data/dimensions.ts：六维定义和展示标签；
 - data/archetypes.ts：七个人格原型坐标与 `visualSymbol`；
-- data/results.ts：固定结果文案、`heartEyeBalance`、彩蛋和免责声明；
+- data/results.ts：固定结果文案、`recall`（名场面回响金句）、`heartEyeBalance`、彩蛋和免责声明；
 - data/population-stats.ts：测友坐标快照，生成方式见 scripts/sync-population.mjs；
 - components/share-poster.tsx：分享海报的唯一实现，内容只读 data/；
 - lib/scoring.ts：展示分、主型/副型/最不像和证据生成；
@@ -54,11 +55,11 @@ docs/archive/                历史路线，不得被运行时代码引用
 
 | 层 | 当前版本 |
 | --- | --- |
-| 题库 | Question Set v3.1 |
-| 六维模型 | Dimension Model v2.0 |
+| 题库 | Question Set v3.2（矩阵数值为 v3.1，v3.2 为两处文案勘误） |
+| 六维模型 | Dimension Model v2.1（ID、语义与内部名同 v2.0，展示文案梗感化） |
 | 七人格坐标 | Archetype Profiles v2.1 |
 | 分类器 | Calibrated Item-Profile Matching v3.0（公式未变，矩阵为 v3.1） |
-| 结果文案 | Result System v1.1 |
+| 结果文案 | Result System v2.0 |
 
 ## 目录说明
 
@@ -75,6 +76,8 @@ docs/archive/                历史路线，不得被运行时代码引用
 5. [七人互联网人格档案](research/04-七人互联网人格档案.md)
 6. [人物对照与六维模型推导](research/05-人物对照与六维模型推导.md)
 7. [待人工核验清单](research/06-待人工核验清单.md)
+8. [玩梗金句候选库](research/07-玩梗金句候选库.md)
+8. [玩梗金句候选库](research/07-玩梗金句候选库.md)
 
 研究材料必须区分可观察事实、解释和产品抽象；未经核验的台词、数字、剪辑叙事和网友判断不能直接写成节目事实或真人结论。
 
@@ -86,6 +89,7 @@ docs/archive/                历史路线，不得被运行时代码引用
 - [人格分布优化：诊断基线、原则与路线图](decisions/人格分布优化-诊断基线原则与路线图.md)
 - [Question Set v3.1 评分矩阵合入记录](decisions/QuestionSet-v3.1-评分矩阵提案.md)
 - [Archetype Coordinates v2.1 坐标合入记录](decisions/ArchetypeCoordinates-v2.1-提案.md)
+- [Result System v2 梗感改版与 Question Set v3.2 勘误](decisions/ResultSystem-v2-梗感改版与QuestionSet-v3.2勘误.md)
 
 这里记录当前版本为什么这样做，以及旧方案为什么退出。修改冻结的题目 ID、选项 ID、题目顺序、六维、人格坐标或结果边界时，需要同步更新数据版本、测试和相关决策文档。
 
