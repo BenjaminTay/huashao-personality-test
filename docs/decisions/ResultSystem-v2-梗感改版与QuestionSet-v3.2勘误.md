@@ -182,3 +182,13 @@ zheng 不采用本人冲突语境台词——郑爽流传原话普遍处于高�
 已同步 AGENTS.md 附注。产品内不再展示免责声明；仓库 README 与 docs 中的原型解释性说明仍保留
 （属项目对外说明，非产品运行文案）。`RESULT_CONTENT_VERSION` → 2.5。
 
+## 9. Result System v2.6 补充记录（2026-09-04，低调分享入口 + 复制配文）
+
+产品负责人确认 2.0 方向为"分享前置"但不破坏结果页观感，本修订：
+
+1. **内容层**：`data/results.ts` 七型各新增 `shareCopy`（"我在花学测试里测出了「型名 · 称号」＋一句话解释＋recall 金句梗"，每条 77–99 字，不含链接；金句沿用既有"流传版/非原话"考古分级，无新引语来源）。`RESULT_CONTENT_VERSION` → 2.6；
+2. **分享入口低调化**：结果页 hero 右上角一枚小号幽灵按钮「分享 ↗」→ 轻量分享面板（移动端底部滑出 / 桌面居中卡片），含三个动作：发图（复用既有 `handlePosterAction` 与海报 spec）、转发（移动端 Web Share 文字+链接，桌面/降级为复制链接）、复制花学配文（`buildShareCopy` = `shareCopy` + 邀请句 + 测试链接）；面板底部引导"文末海报区可定制姓名"。原文末海报区（预览/姓名/下载）原样保留；
+3. **工程**：`components/share-poster.tsx` 新增纯函数 `buildShareCopy`（组件不持有文案副本），`lib/analytics.ts` 新增 `share-forward`、`share-copy` 两事件（只记事件、不记内容，事件清单同步《结果系统产品体验与隐私决策》§11 与 AGENTS.md）；
+4. **明确不做**：Reveal 屏分享入口、结果流中插入分享区块、姓名输入上移、任何题库/评分/六维改动。
+5. **验证**：lint / typecheck / vitest（含 shareCopy 断言：每型 50–180 字符、含型名与链接）/ build 通过；390px 与桌面宽度目检。
+

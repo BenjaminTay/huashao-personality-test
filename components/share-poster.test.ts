@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import { ARCHETYPES } from "../data/archetypes";
 import { RESULT_CONTENT } from "../data/results";
 import type { ArchetypeId, DimensionVector } from "../data/types";
-import { buildSharePosterSvg, getTopDimensionIds } from "./share-poster";
+import { buildShareCopy, buildSharePosterSvg, getTopDimensionIds } from "./share-poster";
 
 const SAMPLE_PROFILE: DimensionVector = { R: 64, S: 22, B: 81, D: 47, G: 58, I: 35 };
+const TEST_URL = "https://example.com/huaxue/";
 
 describe("share poster", () => {
   it("selects exactly the two most prominent dimensions", () => {
@@ -41,6 +42,21 @@ describe("share poster", () => {
       expect(poster).toContain(RESULT_CONTENT[id].heartEyeBalance);
       expect(poster).toContain("扫码领取你的花学人格");
       expect(poster).toContain('shape-rendering="crispEdges"');
+    });
+  });
+
+  it("builds a complete share copy for every archetype", () => {
+    (Object.keys(ARCHETYPES) as ArchetypeId[]).forEach((id) => {
+      const copy = buildShareCopy(RESULT_CONTENT[id], TEST_URL);
+
+      expect(copy.length).toBeGreaterThan(50);
+      expect(copy.length).toBeLessThan(180);
+      expect(copy).toContain("花学测试");
+      expect(copy).toContain(ARCHETYPES[id].personName);
+      expect(copy).toContain(ARCHETYPES[id].title);
+      expect(copy).toContain(TEST_URL);
+      expect(copy).not.toContain("undefined");
+      expect(copy).not.toContain("null");
     });
   });
 });

@@ -74,3 +74,11 @@ export function trackShareCard(): void {
 export function trackShareImage(): void {
   send({ event: true, path: "share-image", no_session: 1 });
 }
+
+export function trackShareForward(): void {
+  send({ event: true, path: "share-forward", no_session: 1 });
+}
+
+export function trackShareCopy(): void {
+  send({ event: true, path: "share-copy", no_session: 1 });
+}

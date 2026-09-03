@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { RefObject } from "react";
+import { createPortal } from "react-dom";
 import { ACTS, QUESTIONS, QUESTION_SET_VERSION } from "../data/questions";
 import { ARCHETYPES } from "../data/archetypes";
 import { DIMENSIONS, DIMENSION_ORDER } from "../data/dimensions";
@@ -10,6 +12,8 @@ import { POPULATION_SNAPSHOT } from "../data/population-stats";
 import { calculateResult, getQuestionContribution } from "../lib/scoring";
 import {
   trackShareCard,
+  trackShareCopy,
+  trackShareForward,
   trackShareImage,
   trackTestComplete,
   trackTestStart,
@@ -20,6 +24,7 @@ import type {
 } from "../data/types";
 import {
   balanceFollowUp,
+  buildShareCopy,
   buildSharePosterSpec,
   getTestEntryUrl,
   normalizeShareName,
@@ -137,6 +142,36 @@ function readSession(): {
 
 function formatQuestionNumber(value: string | number): string {
   return String(value).replace(/^Q/, "").padStart(2, "0");
+}
+
+/**
+ * 复制文本到剪贴板：优先 Clipboard API，失败时退回隐藏 textarea + execCommand，
+ * 兼容部分 WebView（微信等）内的环境。
+ */
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // 继续尝试旧路径
+  }
+  try {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.top = "0";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    const ok = document.execCommand("copy");
+    textarea.remove();
+    return ok;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -682,6 +717,96 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
     return window.matchMedia?.("(hover: none) and (pointer: coarse)").matches ?? false;
   });
   const [posterExporting, setPosterExporting] = useState(false);
+  const [shareSheetOpen, setShareSheetOpen] = useState(false);
+  const [shareFeedback, setShareFeedback] = useState<{ ok: boolean; text: string } | null>(null);
+  const shareTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const shareSheetRef = useRef<HTMLDivElement | null>(null);
+  const shareFeedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const shareText = useMemo(
+    () => buildShareCopy(content, testUrl),
+    [content, testUrl],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (shareFeedbackTimer.current) clearTimeout(shareFeedbackTimer.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!shareSheetOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setShareSheetOpen(false);
+      setShareFeedback(null);
+      if (shareFeedbackTimer.current) clearTimeout(shareFeedbackTimer.current);
+      shareTriggerRef.current?.focus({ preventScroll: true });
+    };
+    window.addEventListener("keydown", onKey);
+    shareSheetRef.current?.focus({ preventScroll: true });
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [shareSheetOpen]);
+
+  function closeShareSheet() {
+    setShareSheetOpen(false);
+    setShareFeedback(null);
+    if (shareFeedbackTimer.current) clearTimeout(shareFeedbackTimer.current);
+    shareTriggerRef.current?.focus({ preventScroll: true });
+  }
+
+  function showShareFeedback(ok: boolean, text: string) {
+    setShareFeedback({ ok, text });
+    if (shareFeedbackTimer.current) clearTimeout(shareFeedbackTimer.current);
+    shareFeedbackTimer.current = setTimeout(() => setShareFeedback(null), 2600);
+  }
+
+  async function handleSheetPoster(): Promise<void> {
+    await handlePosterAction();
+    if (!shareSheetOpen) return;
+    setShareSheetOpen(false);
+    setShareFeedback(null);
+    shareTriggerRef.current?.focus({ preventScroll: true });
+  }
+
+  async function handleForward(): Promise<void> {
+    if (typeof navigator !== "undefined" && "share" in navigator) {
+      try {
+        await navigator.share({
+          title: `花学测试 · 我测出了${primary.personName}`,
+          text: shareText,
+          url: testUrl,
+        });
+        trackShareForward();
+        closeShareSheet();
+        return;
+      } catch {
+        // 用户取消或分享面板不可用：落到复制链接路径
+      }
+    }
+    const ok = await copyToClipboard(testUrl);
+    if (ok) {
+      trackShareForward();
+      showShareFeedback(true, "链接已复制，去粘贴给朋友吧");
+    } else {
+      showShareFeedback(false, "复制失败，请长按手动复制网址");
+    }
+  }
+
+  async function handleCopyShareText(): Promise<void> {
+    const ok = await copyToClipboard(shareText);
+    if (ok) {
+      trackShareCopy();
+      showShareFeedback(true, "花学配文已复制，去粘贴吧");
+    } else {
+      showShareFeedback(false, "复制失败，请重试");
+    }
+  }
 
   useEffect(() => {
     const media = window.matchMedia("(hover: none) and (pointer: coarse)");
@@ -720,12 +845,33 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
 
   return (
     <section className="result-screen page-enter" aria-labelledby="result-title">
+      <ResultShareSheet
+        open={shareSheetOpen}
+        onClose={closeShareSheet}
+        sheetRef={shareSheetRef}
+        exporting={posterExporting}
+        prefersShareOverDownload={prefersShareOverDownload}
+        shareFeedback={shareFeedback}
+        onPoster={() => void handleSheetPoster()}
+        onForward={() => void handleForward()}
+        onCopyText={() => void handleCopyShareText()}
+      />
       <div className="result-file-head">
         <div><p className="eyebrow"><span className="red-dot" /> PERSONALITY FILE / HXT-002</p><p className="result-timecode">TRAVEL GROUP / FIELD REPORT</p></div>
         <span className={`result-symbol symbol-${primary.visualSymbol}`} aria-hidden="true" />
       </div>
       <div className="result-hero">
         <p className="result-english">{primary.englishName}</p>
+        <button
+          ref={shareTriggerRef}
+          type="button"
+          className="hero-share-trigger"
+          aria-haspopup="dialog"
+          aria-expanded={shareSheetOpen}
+          onClick={() => setShareSheetOpen(true)}
+        >
+          分享 ↗
+        </button>
         <h1 id="result-title">{primary.personName}</h1>
         <p className="result-type-title">{primary.title}</p>
         <p className="result-type-strategy"><span>花学默认姿势</span>{primary.strategy}</p>
@@ -865,5 +1011,63 @@ function ResultScreen({ result, onRetake }: { result: ComputedResult; onRetake: 
 
       <div className="result-actions"><button className="primary-action" type="button" onClick={onRetake}><span>再测一次</span><span className="action-arrow">↗</span></button><button className="text-action" type="button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>回到结果顶部 ↑</button></div>
     </section>
+  );
+}
+
+function ResultShareSheet({
+  open,
+  onClose,
+  sheetRef,
+  exporting,
+  prefersShareOverDownload,
+  shareFeedback,
+  onPoster,
+  onForward,
+  onCopyText,
+}: {
+  open: boolean;
+  onClose: () => void;
+  sheetRef: RefObject<HTMLDivElement | null>;
+  exporting: boolean;
+  prefersShareOverDownload: boolean;
+  shareFeedback: { ok: boolean; text: string } | null;
+  onPoster: () => void;
+  onForward: () => void;
+  onCopyText: () => void;
+}) {
+  if (!open) return null;
+  return createPortal(
+    <div className="share-sheet-backdrop" onClick={onClose}>
+      <div
+        ref={sheetRef}
+        className="share-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-label="分享这份花学档案"
+        tabIndex={-1}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="share-sheet-head">
+          <span>SHARE / 把这份档案带走</span>
+          <button type="button" className="share-sheet-close" aria-label="关闭分享面板" onClick={onClose}>✕</button>
+        </div>
+        <button type="button" className="share-sheet-item" disabled={exporting} onClick={onPoster}>
+          <span className="share-sheet-item-title">{exporting ? "正在生成图片…" : "发图：花学档案卡"}</span>
+          <span className="share-sheet-item-desc">{prefersShareOverDownload ? "生成海报，用系统分享/保存" : "下载一张 3:4 海报 PNG"}</span>
+        </button>
+        <button type="button" className="share-sheet-item" onClick={onForward}>
+          <span className="share-sheet-item-title">转发：发给朋友来测</span>
+          <span className="share-sheet-item-desc">{typeof navigator !== "undefined" && "share" in navigator ? "调起系统分享面板" : "复制测试链接"}</span>
+        </button>
+        <button type="button" className="share-sheet-item" onClick={onCopyText}>
+          <span className="share-sheet-item-title">配文：复制我的花学文案</span>
+          <span className="share-sheet-item-desc">一段介绍 + 花学金句，随附测试链接</span>
+        </button>
+        <div className="share-sheet-foot">
+          <span role="status" aria-live="polite">{shareFeedback ? (shareFeedback.ok ? `✓ ${shareFeedback.text}` : `✗ ${shareFeedback.text}`) : "想给海报写上名字？文末海报区可以定制 ↓"}</span>
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }

@@ -3,7 +3,9 @@ import type { ArchetypeId } from "./types";
 // Result System v2.5（2026-09-03，产品负责人批准）：移除全部防御性文案——
 // 结果页底部"娱乐原型说明"免责声明下线、六维/测友脚注去口径化、海报"纯娱乐"字样删除。
 // 注意：这是产品负责人对 AGENTS.md 免责约束的显式覆盖，决策记录见 ResultSystem-v2 决策文 §8。
-export const RESULT_CONTENT_VERSION = "2.5";
+// Result System v2.6（2026-09-04，产品负责人批准）：七型新增 shareCopy 字段——结果页"复制花学配文"
+// 的内容主体（型名+称号、一句话解释、recall 金句梗），不含链接（链接由 buildShareCopy 运行时拼接）。
+export const RESULT_CONTENT_VERSION = "2.6";
 
 export interface RecallItem {
   quote: string;
@@ -23,6 +25,7 @@ export interface PersonalityResultContent {
   heartschemes: string;
   heartEyeBalance: string;
   share: string;
+  shareCopy: string;
   recall: RecallItem;
 }
 
@@ -39,6 +42,8 @@ export const RESULT_CONTENT: Record<ArchetypeId, PersonalityResultContent> = {
     heartEyeBalance: "高配导航版",
     heartschemes: "高配导航版。不是每一颗都拿来害人，主要拿来确认现在到底是什么情况。",
     share: "别人还在问：“发生什么了吗？”我已经在重新画关系图了。",
+    shareCopy:
+      "我在花学测试里测出了「毛阿敏型 · 人际关系导航仪」——先看清局，再决定怎么走。带了一整季队的“大姐”收官夜喊出“你们死哪去了”——撑过场的人才知道这句的分量。",
     recall: {
       quote: "你们死哪去了。",
       source: "毛阿敏 · 花少2 收官崩溃名场面（流传版，另有“你俩”变体）",
@@ -57,6 +62,8 @@ export const RESULT_CONTENT: Record<ArchetypeId, PersonalityResultContent> = {
     heartEyeBalance: "算力全给关系",
     heartschemes: "算力基本全给关系了。不是拿来宫斗，拿来反复确认：“所以我们现在到底算什么？”",
     share: "关系变了可以。别让我最后一个知道。",
+    shareCopy:
+      "我在花学测试里测出了「许晴型 · 关系纯度检测仪」——关系要是悄悄变了味，我不会假装没发现。全网花学就是从那句“上一季的人都正常”里长出来的，而我是真的会去问原因的那个人。",
     recall: {
       quote: "上一季的人都正常。",
       source: "许晴 · 花少2 名场面（井柏然追问后说出，流传版）",
@@ -75,6 +82,8 @@ export const RESULT_CONTENT: Record<ArchetypeId, PersonalityResultContent> = {
     heartEyeBalance: "有，但懒得藏",
     heartschemes: "有，但懒得藏。可以直接说的事情，为什么还要演三集？",
     share: "你的情绪我可以理解。但先别急着登记到我名下。",
+    shareCopy:
+      "我在花学测试里测出了「宁静型 · 边界主权持有人」——你的情绪我可以理解，但先别急着登记到我名下。当年一句“我不去，我也不玩”，现在是我的防身术。",
     recall: {
       quote: "我不去，我也不玩。",
       source: "宁静 · 花少2 拒绝名场面（流传版）",
@@ -93,6 +102,8 @@ export const RESULT_CONTENT: Record<ArchetypeId, PersonalityResultContent> = {
     heartEyeBalance: "主要朝内",
     heartschemes: "主要朝内。别人拿心眼子研究别人，你拿来研究：“我是不是哪里又没做好？”",
     share: "问题还没开始追责。我已经提交自查报告了。",
+    shareCopy:
+      "我在花学测试里测出了「郑爽型 · 关系责任自检员」——事情还没查清跟我有没有关系，我已经开始自查了。别人在查证据，我在查自己：“追责还没开始，检讨已经写完了。”",
     recall: {
       quote: "追责还没开始，检讨已经写完了。",
       source: "互联网花学总结 · 非原话",
@@ -111,6 +122,8 @@ export const RESULT_CONTENT: Record<ArchetypeId, PersonalityResultContent> = {
     heartEyeBalance: "看懂但不续费",
     heartschemes: "看懂了，但不一定续费。有些局可以分析，有些局：我先去吃饭。",
     share: "不是没看懂。只是想了一下：好像没必要把今天赔进去。",
+    shareCopy:
+      "我在花学测试里测出了「陈意涵型 · 幸福者退让」——不是看不懂局，是先算了算：把今天赔进去，值不值。气氛降到冰点时全场第一个笑出声的是我——你管这叫没心没肺，我管这叫先把自己过好。",
     recall: {
       quote: "哈哈哈哈哈哈。",
       source: "陈意涵 · 许晴名场面现场笑声（节目原声）",
@@ -129,6 +142,8 @@ export const RESULT_CONTENT: Record<ArchetypeId, PersonalityResultContent> = {
     heartEyeBalance: "工程师版本",
     heartschemes: "工程师版本。别人拿来站队，你拿来排查：到底是哪一个环节又坏了？",
     share: "本来只是来参加活动。最后莫名其妙成了现场负责人。",
+    shareCopy:
+      "我在花学测试里测出了「井柏然型 · 公共关系维修工」——本来只是来参加活动，最后莫名其妙成了现场负责人。嘴上全是“随便”，心里又都是答案，所以负责收拾的总是我。",
     recall: {
       quote: "嘴上全是随便，但心里又都是答案。",
       source: "房车大战名场面 · 互联网流传句（广泛归井柏然语境，原话待核）",
@@ -147,6 +162,8 @@ export const RESULT_CONTENT: Record<ArchetypeId, PersonalityResultContent> = {
     heartEyeBalance: "拉完了",
     heartschemes: "拉完了。特别说明：这不是最低分，这是另一个运行模式。",
     share: "心眼子余额：拉完了。恭喜。你可能只是那个真的来旅游的人。",
+    shareCopy:
+      "我在花学测试里测出了「杨洋型 · 真的来旅游的人」——心眼子余额：拉完了，但这只是另一个运行模式。“姐姐们要是知道我不在，肯定会来接我的”——这话我是真的信。",
     recall: {
       quote: "姐姐们要是知道我不在，肯定会来接我的。",
       source: "杨洋 · 剑桥走失后采（2026 全网考古核心引用句，转录存变体）",

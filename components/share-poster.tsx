@@ -385,3 +385,17 @@ export function buildSharePosterSvg(
   return buildSharePosterSpec(archetype, content, displayScores, testUrl, displayName, leastLike).svg;
 }
 
+/**
+ * 结果页“复制花学配文”用的完整文本：内容主体来自 data/results.ts 的
+ * shareCopy（v2.6 新增，七型各一条），此处只拼邀请句与测试链接，
+ * 不维护任何逐型文案副本。
+ */
+export function buildShareCopy(
+  content: PersonalityResultContent,
+  testUrl: string,
+): string {
+  const body = content.shareCopy.trim();
+  if (!body) return "";
+  return `${body}\n\n你也来测测你是哪种花学人格：${testUrl}`;
+}
+
