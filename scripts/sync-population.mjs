@@ -32,12 +32,11 @@ if (!SITE || !TOKEN) {
   fail("缺少 GOATCOUNTER_SITE 或 GOATCOUNTER_API_TOKEN 环境变量");
 }
 
-const sinceIso = `${SINCE}T00:00:00Z`;
 const query = new URLSearchParams({
   path_by_name: "true",
   include_paths: EVENT_PATHS.join(","),
   limit: "100",
-  start: sinceIso,
+  start: SINCE,
 });
 
 const url = `${SITE}/api/v0/stats/hits?${query.toString()}`;
