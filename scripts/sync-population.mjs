@@ -51,6 +51,32 @@ function fail(message) {
   process.exit(1);
 }
 
+// GoatCounter API 偶发返回 404/5xx 或网络抖动，重试几次再放弃。
+const RETRY_ATTEMPTS = 3;
+const RETRY_BASE_DELAY_MS = 600;
+
+async function fetchWithRetry(url, options) {
+  for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
+    let response;
+    try {
+      response = await fetch(url, options);
+    } catch (error) {
+      if (attempt === RETRY_ATTEMPTS) throw error;
+      console.error(
+        `sync-population: 网络请求失败（第 ${attempt}/${RETRY_ATTEMPTS} 次）：${error.message}`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, RETRY_BASE_DELAY_MS * attempt));
+      continue;
+    }
+    if (response.ok || attempt === RETRY_ATTEMPTS) return response;
+    console.error(
+      `sync-population: API 返回 ${response.status}（第 ${attempt}/${RETRY_ATTEMPTS} 次），稍后重试`,
+    );
+    await new Promise((resolve) => setTimeout(resolve, RETRY_BASE_DELAY_MS * attempt));
+  }
+  throw new Error("fetchWithRetry 不应到达此处");
+}
+
 if (!SITE || !TOKEN) {
   fail("缺少 GOATCOUNTER_SITE 或 GOATCOUNTER_API_TOKEN 环境变量");
 }
@@ -63,7 +89,7 @@ const query = new URLSearchParams({
 });
 
 const url = `${SITE}/api/v0/stats/hits?${query.toString()}`;
-const response = await fetch(url, {
+const response = await fetchWithRetry(url, {
   headers: {
     Authorization: `Bearer ${TOKEN}`,
     "Content-Type": "application/json",
