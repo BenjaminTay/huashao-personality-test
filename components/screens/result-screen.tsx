@@ -17,9 +17,10 @@ import {
   balanceFollowUp,
   buildShareCopy,
   buildSharePosterSpec,
+  canShareImageFile,
   getTestEntryUrl,
   normalizeShareName,
-  sharePosterAsImage,
+  sharePosterPngFile,
   svgToPngBlob,
 } from "../share-poster";
 import {
@@ -65,7 +66,7 @@ function ResultShareSheet({
   onClose,
   sheetRef,
   exporting,
-  prefersShareOverDownload,
+  posterActionDesc,
   shareFeedback,
   onPoster,
   onForward,
@@ -75,7 +76,7 @@ function ResultShareSheet({
   onClose: () => void;
   sheetRef: RefObject<HTMLDivElement | null>;
   exporting: boolean;
-  prefersShareOverDownload: boolean;
+  posterActionDesc: string;
   shareFeedback: { ok: boolean; text: string } | null;
   onPoster: () => void;
   onForward: () => void;
@@ -99,7 +100,7 @@ function ResultShareSheet({
         </div>
         <button type="button" className="share-sheet-item" disabled={exporting} onClick={onPoster}>
           <span className="share-sheet-item-title">{exporting ? "正在生成图片…" : "发图：花学档案卡"}</span>
-          <span className="share-sheet-item-desc">{prefersShareOverDownload ? "生成海报，用系统分享/保存" : "下载一张 3:4 海报 PNG"}</span>
+          <span className="share-sheet-item-desc">{posterActionDesc}</span>
         </button>
         <button type="button" className="share-sheet-item" onClick={onForward}>
           <span className="share-sheet-item-title">转发：发给朋友来测</span>
@@ -112,6 +113,50 @@ function ResultShareSheet({
         <div className="share-sheet-foot">
           <span role="status" aria-live="polite">{shareFeedback ? (shareFeedback.ok ? `✓ ${shareFeedback.text}` : `✗ ${shareFeedback.text}`) : "想给海报写上名字？文末海报区可以定制 ↓"}</span>
         </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+/**
+ * 无系统文件分享能力的移动环境（微信/QQ 等 WebView）保存海报的兜底：
+ * 把 PNG 作为页面内真实 <img> 渲染，长按才有“保存图片/存储图像”菜单；
+ * 直接 window.open 顶层图片页在安卓 WebView 里没有可保存的长按菜单。
+ */
+function PosterPreviewModal({
+  url,
+  onClose,
+  previewRef,
+}: {
+  url: string;
+  onClose: () => void;
+  previewRef: RefObject<HTMLDivElement | null>;
+}) {
+  if (!url) return null;
+  return createPortal(
+    <div className="poster-preview-backdrop" onClick={onClose}>
+      <div
+        ref={previewRef}
+        className="poster-preview"
+        role="dialog"
+        aria-modal="true"
+        aria-label="海报预览：长按图片保存到相册"
+        tabIndex={-1}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="share-sheet-head">
+          <span>POSTER PREVIEW / 长按图片保存</span>
+          <button type="button" className="share-sheet-close" aria-label="关闭海报预览" onClick={onClose}>✕</button>
+        </div>
+        {/* 长按保存依赖原生 img 的上下文菜单，blob: 源也无法走 next/image */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="poster-preview-img" src={url} alt="花学人格鉴定海报，长按可保存" />
+        <p className="poster-preview-hint">
+          长按上面的海报，选择「保存图片 / 保存到相册」即可存入手机。
+          <br />
+          微信里保存后可从「我 → 相册」里找到并直接发朋友圈。
+        </p>
       </div>
     </div>,
     document.body,
@@ -146,8 +191,13 @@ export function ResultScreen({ result, onRetake }: { result: ComputedResult; onR
   const [posterExporting, setPosterExporting] = useState(false);
   const [shareSheetOpen, setShareSheetOpen] = useState(false);
   const [shareFeedback, setShareFeedback] = useState<{ ok: boolean; text: string } | null>(null);
+  const [posterPreviewUrl, setPosterPreviewUrl] = useState<string | null>(null);
+  const [shareCapability, setShareCapability] = useState<"file-share" | "long-press">("long-press");
   const shareTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const posterMainRef = useRef<HTMLButtonElement | null>(null);
   const shareSheetRef = useRef<HTMLDivElement | null>(null);
+  const posterPreviewRef = useRef<HTMLDivElement | null>(null);
+  const posterFocusReturnRef = useRef<HTMLButtonElement | null>(null);
   const shareFeedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const shareText = useMemo(
@@ -158,8 +208,26 @@ export function ResultScreen({ result, onRetake }: { result: ComputedResult; onR
   useEffect(() => {
     return () => {
       if (shareFeedbackTimer.current) clearTimeout(shareFeedbackTimer.current);
+      if (posterPreviewUrl) URL.revokeObjectURL(posterPreviewUrl);
     };
-  }, []);
+  }, [posterPreviewUrl]);
+
+  useEffect(() => {
+    if (!posterPreviewUrl) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setPosterPreviewUrl(null);
+      posterFocusReturnRef.current?.focus({ preventScroll: true });
+    };
+    window.addEventListener("keydown", onKey);
+    posterPreviewRef.current?.focus({ preventScroll: true });
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [posterPreviewUrl]);
 
   useEffect(() => {
     if (!shareSheetOpen) return;
@@ -187,18 +255,37 @@ export function ResultScreen({ result, onRetake }: { result: ComputedResult; onR
     shareTriggerRef.current?.focus({ preventScroll: true });
   }
 
+  function openShareSheet() {
+    setShareCapability(
+      prefersShareOverDownload && canShareImageFile() ? "file-share" : "long-press",
+    );
+    setShareSheetOpen(true);
+  }
+
   function showShareFeedback(ok: boolean, text: string) {
     setShareFeedback({ ok, text });
     if (shareFeedbackTimer.current) clearTimeout(shareFeedbackTimer.current);
     shareFeedbackTimer.current = setTimeout(() => setShareFeedback(null), 2600);
   }
 
-  async function handleSheetPoster(): Promise<void> {
-    await handlePosterAction();
-    if (!shareSheetOpen) return;
+  function openPosterPreview(url: string, fromSheet: boolean) {
     setShareSheetOpen(false);
     setShareFeedback(null);
-    shareTriggerRef.current?.focus({ preventScroll: true });
+    if (shareFeedbackTimer.current) clearTimeout(shareFeedbackTimer.current);
+    posterFocusReturnRef.current = fromSheet ? shareTriggerRef.current : posterMainRef.current;
+    setPosterPreviewUrl(url);
+  }
+
+  function closePosterPreview() {
+    setPosterPreviewUrl(null);
+    posterFocusReturnRef.current?.focus({ preventScroll: true });
+  }
+
+  async function handleSheetPoster(): Promise<void> {
+    const previewOpened = await handlePosterAction(true);
+    if (!previewOpened && shareSheetOpen) {
+      closeShareSheet();
+    }
   }
 
   async function handleForward(): Promise<void> {
@@ -243,19 +330,30 @@ export function ResultScreen({ result, onRetake }: { result: ComputedResult; onR
     return () => media.removeEventListener?.("change", update);
   }, []);
 
-  async function handlePosterAction(): Promise<void> {
-    if (posterExporting) return;
+  /**
+   * 海报导出统一入口：先生成一份 1080×1440 PNG Blob，再按环境分流——
+   * 桌面/精确指针：直接下载；触屏且支持 Web Share 文件：调起系统分享；
+   * 触屏但不支持文件分享（微信等 WebView）：打开页面内预览层供长按保存。
+   * 返回 true 表示已切换到长按预览层（此时调用方不应再聚焦回分享面板）。
+   */
+  async function handlePosterAction(fromSheet: boolean): Promise<boolean> {
+    if (posterExporting) return false;
     setPosterExporting(true);
     const baseName = `huaxue-share-poster-${result.primaryType}`;
     try {
+      const pngBlob = await svgToPngBlob(sharePosterSpec);
+      if (prefersShareOverDownload && canShareImageFile()) {
+        trackShareImage();
+        await sharePosterPngFile(pngBlob, baseName);
+        return false;
+      }
       if (prefersShareOverDownload) {
         trackShareImage();
-        await sharePosterAsImage(sharePosterSpec, baseName);
-        return;
+        openPosterPreview(URL.createObjectURL(pngBlob), fromSheet);
+        return true;
       }
       trackShareCard();
-      const blob = await svgToPngBlob(sharePosterSpec);
-      const url = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(pngBlob);
       const link = document.createElement("a");
       link.href = url;
       link.download = `${baseName}.png`;
@@ -263,8 +361,10 @@ export function ResultScreen({ result, onRetake }: { result: ComputedResult; onR
       link.click();
       link.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 4000);
+      return false;
     } catch {
       // 分享被取消或导出失败时静默，不打断结果页
+      return false;
     } finally {
       setPosterExporting(false);
     }
@@ -277,11 +377,22 @@ export function ResultScreen({ result, onRetake }: { result: ComputedResult; onR
         onClose={closeShareSheet}
         sheetRef={shareSheetRef}
         exporting={posterExporting}
-        prefersShareOverDownload={prefersShareOverDownload}
+        posterActionDesc={
+          !prefersShareOverDownload
+            ? "下载一张 3:4 海报 PNG"
+            : shareCapability === "file-share"
+              ? "生成海报，用系统分享/保存"
+              : "生成海报，长按图片保存到相册"
+        }
         shareFeedback={shareFeedback}
         onPoster={() => void handleSheetPoster()}
         onForward={() => void handleForward()}
         onCopyText={() => void handleCopyShareText()}
+      />
+      <PosterPreviewModal
+        url={posterPreviewUrl ?? ""}
+        onClose={closePosterPreview}
+        previewRef={posterPreviewRef}
       />
       <div className="result-file-head">
         <div><p className="eyebrow"><span className="red-dot" /> PERSONALITY FILE / HXT-002</p><p className="result-timecode">TRAVEL GROUP / FIELD REPORT</p></div>
@@ -295,7 +406,7 @@ export function ResultScreen({ result, onRetake }: { result: ComputedResult; onR
           className="hero-share-trigger"
           aria-haspopup="dialog"
           aria-expanded={shareSheetOpen}
-          onClick={() => setShareSheetOpen(true)}
+          onClick={openShareSheet}
         >
           分享 ↗
         </button>
@@ -388,10 +499,11 @@ export function ResultScreen({ result, onRetake }: { result: ComputedResult; onR
             <p id="share-name-help">名字只会出现在你保存的图上。</p>
           </div>
           <button
+            ref={posterMainRef}
             className="download-action share-image-action"
             type="button"
             disabled={posterExporting}
-            onClick={() => void handlePosterAction()}
+            onClick={() => void handlePosterAction(false)}
           >
             <span>{prefersShareOverDownload ? "分享/保存成图片" : "下载我的海报"}</span>
             <span>{prefersShareOverDownload ? "↗" : "↘"}</span>

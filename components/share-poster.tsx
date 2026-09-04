@@ -224,16 +224,26 @@ export async function svgToPngBlob(spec: SharePosterSpec): Promise<Blob> {
   return blob;
 }
 
-/** 移动端主路径：优先 Web Share 直接分享 PNG；不可用时在新标签打开 PNG 供长按保存。 */
-export async function sharePosterAsImage(spec: SharePosterSpec, fileName: string): Promise<void> {
-  const pngBlob = await svgToPngBlob(spec);
-  const file = new File([pngBlob], `${fileName}.png`, { type: "image/png" });
-  if (navigator.canShare?.({ files: [file] })) {
-    await navigator.share({ files: [file] });
-    return;
+/**
+ * 当前环境能否用 Web Share 直接发送 PNG 文件。
+ * 支持：iOS Safari 15+、安卓 Chrome 等；不支持：微信/QQ 等内置 WebView、老浏览器。
+ * 用 1×1 探针文件探测而非只看 API 存在，避免部分 WebView 假暴露 canShare。
+ */
+export function canShareImageFile(): boolean {
+  if (typeof navigator === "undefined" || typeof File === "undefined") return false;
+  if (!navigator.share || typeof navigator.canShare !== "function") return false;
+  try {
+    const probe = new File([new Blob(["probe"])], "probe.png", { type: "image/png" });
+    return navigator.canShare({ files: [probe] });
+  } catch {
+    return false;
   }
-  const pngUrl = URL.createObjectURL(pngBlob);
-  window.open(pngUrl, "_blank");
+}
+
+/** 用系统分享直接发送海报 PNG 文件（调用前先确认 canShareImageFile() 为 true）。 */
+export async function sharePosterPngFile(pngBlob: Blob, fileName: string): Promise<void> {
+  const file = new File([pngBlob], `${fileName}.png`, { type: "image/png" });
+  await navigator.share({ files: [file] });
 }
 
 export function normalizeShareName(value: string): string {

@@ -1291,6 +1291,53 @@ button.download-action {
   .share-sheet { animation: none; }
 }
 
+/* Poster preview：无系统文件分享的移动 WebView（微信/QQ 等）长按保存兜底 */
+.poster-preview-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+  background: rgba(29, 33, 29, .6);
+  animation: sheet-fade .18s ease both;
+}
+
+.poster-preview {
+  width: min(560px, 100%);
+  max-height: 92svh;
+  overflow-y: auto;
+  padding: 18px 18px 16px;
+  border: 1px solid var(--line-strong);
+  background: var(--paper);
+  box-shadow: 12px 14px 0 rgba(213, 200, 180, .7);
+  outline: none;
+  animation: sheet-rise .22s ease both;
+}
+
+.poster-preview-img {
+  display: block;
+  width: min(100%, 400px);
+  height: auto;
+  margin: 16px auto 0;
+  background: var(--paper);
+  box-shadow: 6px 7px 0 rgba(213, 200, 180, .7);
+}
+
+.poster-preview-hint {
+  margin: 18px 0 2px;
+  color: var(--muted-ink);
+  font-size: 12px;
+  line-height: 1.8;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .poster-preview-backdrop,
+  .poster-preview { animation: none; }
+}
+
 /* 幕末观察员批注（Act System 体验 pass）：回放上一幕行为的红笔档案条 */
 .observer-note {
   width: min(640px, 94%);
