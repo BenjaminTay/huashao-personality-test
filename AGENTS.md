@@ -64,7 +64,7 @@
 - 结果中的分数是展示分，不是百分比概率；不要显示“你有 73% 是某某型”或虚构统计置信度。
 - 匿名埋点事件只在 `lib/analytics.ts` 定义：`start-test`、`complete-{type}`、`share-download`、`share-image`、`share-forward`、`share-copy`。只记录事件与主型，不携带原始答案；海报个性化姓名只存在本地，不随事件上传。
 - 结果页与分享海报的称号、文案和 `heartEyeBalance` 一律来自 `data/`（海报的 `visualSymbol` 在 `data/archetypes.ts`），分享组件不维护自己的文案副本。
-- `data/population-stats.ts` 是"测友坐标"快照，只能由 `.github/workflows/sync-population.yml` 从 GoatCounter 事件生成；展示口径为"人次"，样本小于 50 人次不显示百分比。
+- `data/population-stats.ts` 是"测友坐标"快照：每次部署前由 `.github/workflows/deploy-cloudflare.yml`（每日 UTC 02:23 定时刷新 + 代码 push）在构建现场从 GoatCounter 事件重新生成并覆盖，不产生提交；仓库内保留的是静态基线（CI 未覆盖时供本地开发使用，勿手改，需本地刷新用 `npm run sync:local`）。展示口径为"人次"，样本小于 50 人次不显示百分比。
 
 ## 完成检查
 

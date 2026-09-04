@@ -27,7 +27,7 @@ data/                        当前运行时使用的内容与模型输入
 lib/scoring.ts               当前运行时使用的计分实现
 lib/scoring.test.ts          计分和数据完整性的回归检查
 lib/analytics.ts             匿名事件埋点（GoatCounter，事件清单见隐私决策）
-data/population-stats.ts     “测友坐标”快照（由 workflow 自动生成，勿手改）
+data/population-stats.ts     “测友坐标”静态基线（构建前由 CI 现场覆盖，勿手改）
 scripts/sync-population.mjs  快照同步脚本（GoatCounter 事件 → data/）
 docs/design/                 视觉和交互规范
 docs/research/               事实材料、解释假设和待核验问题
@@ -44,7 +44,7 @@ docs/archive/                历史路线，不得被运行时代码引用
 - data/dimensions.ts：六维定义和展示标签；
 - data/archetypes.ts：七个人格原型坐标与 `visualSymbol`；
 - data/results.ts：固定结果文案、`recall`（名场面回响金句）、`heartEyeBalance`、`shareCopy`（复制配文主体）与彩蛋；
-- data/population-stats.ts：测友坐标快照，生成方式见 scripts/sync-population.mjs；
+- data/population-stats.ts：测友坐标静态基线（每次部署前由 CI 现场覆盖，生成方式见 scripts/sync-population.mjs）；
 - components/share-poster.tsx：分享海报的唯一实现，内容只读 data/；
 - lib/scoring.ts：展示分、主型/副型/最不像和证据生成；
 - lib/analytics.ts：匿名事件埋点，只携带事件与主型。

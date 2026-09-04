@@ -3,11 +3,18 @@ name: Deploy to Cloudflare Pages
 on:
   push:
     branches: [main]
+  schedule:
+    # 每日数据刷新：构建前现场生成最新"测友坐标"快照后部署，不产生任何提交。
+    # 与代码 push 部署共用同一流水线，但 schedule 运行会跳过 lint/typecheck/test。
+    - cron: "23 2 * * *"
   workflow_dispatch:
 
 concurrency:
   group: cloudflare-pages
   cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
   deploy:
@@ -15,6 +22,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Generate population snapshot
+        run: node scripts/sync-population.mjs
+        env:
+          GOATCOUNTER_SITE: ${{ secrets.GOATCOUNTER_SITE }}
+          GOATCOUNTER_API_TOKEN: ${{ secrets.GOATCOUNTER_API_TOKEN }}
+          GOATCOUNTER_SINCE: ${{ vars.GOATCOUNTER_SINCE }}
+        # 数据刷新失败不应阻断代码上线：告警后沿用仓库内的静态基线继续构建。
+        continue-on-error: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -29,12 +45,15 @@ jobs:
         run: npm ci
 
       - name: Lint
+        if: github.event_name != 'schedule'
         run: npm run lint
 
       - name: Typecheck
+        if: github.event_name != 'schedule'
         run: npm run typecheck
 
       - name: Test
+        if: github.event_name != 'schedule'
         run: npm test
 
       - name: Build static site
