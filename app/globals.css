@@ -70,6 +70,8 @@ button:disabled { cursor: not-allowed; }
 .home-question { margin: 0; font-size: clamp(20px, 2.5vw, 29px); letter-spacing: .02em; }
 .home-subtitle { max-width: 370px; margin: 24px 0 28px; color: var(--muted-ink); font-size: 15px; line-height: 1.85; }
 .home-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 24px; }
+.home-sample { margin: 24px 0 0; color: var(--muted-ink); font: 11px/1.7 var(--font-mono); letter-spacing: .06em; }
+.home-sample strong { color: var(--archive-red-dark); font-weight: 700; }
 .resume-note { max-width: 385px; margin-top: 24px; padding: 11px 13px; border: 1px dashed var(--archive-red); display: flex; align-items: center; gap: 9px; color: var(--archive-red-dark); font-size: 12px; }
 .resume-led { width: 6px; height: 6px; border-radius: 50%; background: var(--archive-red); box-shadow: 0 0 0 4px rgba(182,76,62,.1); }
 .resume-note button { margin-left: auto; padding: 3px 0; border: 0; border-bottom: 1px solid currentColor; background: transparent; color: inherit; cursor: pointer; font: 11px var(--font-mono); white-space: nowrap; }

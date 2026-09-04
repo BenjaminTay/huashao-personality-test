@@ -1,4 +1,9 @@
-import { formatQuestionNumber, type Screen } from "./quiz-session";
+import {
+  formatQuestionNumber,
+  formatSampleCount,
+  getSampleTotal,
+  type Screen,
+} from "./quiz-session";
 
 export function HomeScreen({
   subtitle,
@@ -17,6 +22,7 @@ export function HomeScreen({
   onStart: () => void;
   onContinue: () => void;
 }) {
+  const sampleTotal = getSampleTotal();
   return (
     <section className="home-screen page-enter" aria-labelledby="home-title">
       <div className="home-copy">
@@ -31,6 +37,12 @@ export function HomeScreen({
             <span>开始测试</span><span className="action-arrow">↗</span>
           </button>
         </div>
+        {sampleTotal > 0 && (
+          <p className="home-sample">
+            <span className="red-dot" aria-hidden="true" />
+            测友坐标 · 已有 <strong>{formatSampleCount(sampleTotal)}</strong> 人次完成鉴定
+          </p>
+        )}
         {hasSavedProgress && (
           <div className="resume-note" role="status">
             <span className="resume-led" />
