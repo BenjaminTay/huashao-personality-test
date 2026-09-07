@@ -68,9 +68,11 @@ function ResultShareSheet({
   exporting,
   posterActionDesc,
   shareFeedback,
+  shareName,
   onPoster,
   onForward,
   onCopyText,
+  onShareNameChange,
 }: {
   open: boolean;
   onClose: () => void;
@@ -78,11 +80,14 @@ function ResultShareSheet({
   exporting: boolean;
   posterActionDesc: string;
   shareFeedback: { ok: boolean; text: string } | null;
+  shareName: string;
   onPoster: () => void;
   onForward: () => void;
   onCopyText: () => void;
+  onShareNameChange: (value: string) => void;
 }) {
   if (!open) return null;
+  const cleanName = normalizeShareName(shareName);
   return createPortal(
     <div className="share-sheet-backdrop" onClick={onClose}>
       <div
@@ -98,8 +103,25 @@ function ResultShareSheet({
           <span>SHARE / 把这份档案带走</span>
           <button type="button" className="share-sheet-close" aria-label="关闭分享面板" onClick={onClose}>✕</button>
         </div>
+        <div className="share-personalize share-sheet-personalize">
+          <label htmlFor="share-sheet-name"><span>PERSONALIZE / 姓名</span>姓名（可选）</label>
+          <input
+            id="share-sheet-name"
+            name="share-sheet-name"
+            type="text"
+            value={shareName}
+            maxLength={10}
+            placeholder="请输入姓名"
+            autoComplete="nickname"
+            onChange={(event) => onShareNameChange(event.target.value)}
+            aria-describedby="share-sheet-name-help"
+          />
+          <p id="share-sheet-name-help">
+            {cleanName ? `海报会显示“${cleanName}，你的花少人格是”。` : "不填写也可以直接分享。"}
+          </p>
+        </div>
         <button type="button" className="share-sheet-item" disabled={exporting} onClick={onPoster}>
-          <span className="share-sheet-item-title">{exporting ? "正在生成图片…" : "发图：花学档案卡"}</span>
+          <span className="share-sheet-item-title">{exporting ? "正在生成图片…" : "生成我的人格海报"}</span>
           <span className="share-sheet-item-desc">{posterActionDesc}</span>
         </button>
         <button type="button" className="share-sheet-item" onClick={onForward}>
@@ -111,7 +133,7 @@ function ResultShareSheet({
           <span className="share-sheet-item-desc">一段介绍 + 花学金句，随附测试链接</span>
         </button>
         <div className="share-sheet-foot">
-          <span role="status" aria-live="polite">{shareFeedback ? (shareFeedback.ok ? `✓ ${shareFeedback.text}` : `✗ ${shareFeedback.text}`) : "想给海报写上名字？文末海报区可以定制 ↓"}</span>
+          <span role="status" aria-live="polite">{shareFeedback ? (shareFeedback.ok ? `✓ ${shareFeedback.text}` : `✗ ${shareFeedback.text}`) : "先填写姓名（可选），再生成你的专属海报。"}</span>
         </div>
       </div>
     </div>,
@@ -201,8 +223,8 @@ export function ResultScreen({ result, onRetake }: { result: ComputedResult; onR
   const shareFeedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const shareText = useMemo(
-    () => buildShareCopy(content, testUrl),
-    [content, testUrl],
+    () => buildShareCopy(content, testUrl, cleanShareName),
+    [cleanShareName, content, testUrl],
   );
 
   useEffect(() => {
@@ -292,7 +314,9 @@ export function ResultScreen({ result, onRetake }: { result: ComputedResult; onR
     if (typeof navigator !== "undefined" && "share" in navigator) {
       try {
         await navigator.share({
-          title: `花学测试 · 我测出了${primary.personName}`,
+          title: cleanShareName
+            ? `${cleanShareName}测出了${primary.personName}`
+            : `花学测试 · 我测出了${primary.personName}`,
           text: shareText,
           url: testUrl,
         });
@@ -376,18 +400,20 @@ export function ResultScreen({ result, onRetake }: { result: ComputedResult; onR
         open={shareSheetOpen}
         onClose={closeShareSheet}
         sheetRef={shareSheetRef}
+        shareName={shareName}
         exporting={posterExporting}
         posterActionDesc={
           !prefersShareOverDownload
-            ? "下载一张 3:4 海报 PNG"
+            ? `下载${cleanShareName ? `${cleanShareName}的` : "一张"} 3:4 海报 PNG`
             : shareCapability === "file-share"
-              ? "生成海报，用系统分享/保存"
-              : "生成海报，长按图片保存到相册"
+              ? `生成${cleanShareName ? `${cleanShareName}的` : "我的"}海报，用系统分享/保存`
+              : `生成${cleanShareName ? `${cleanShareName}的` : "我的"}海报，长按图片保存到相册`
         }
         shareFeedback={shareFeedback}
         onPoster={() => void handleSheetPoster()}
         onForward={() => void handleForward()}
         onCopyText={() => void handleCopyShareText()}
+        onShareNameChange={setShareName}
       />
       <PosterPreviewModal
         url={posterPreviewUrl ?? ""}
@@ -481,7 +507,7 @@ export function ResultScreen({ result, onRetake }: { result: ComputedResult; onR
         </div>
         <div className="share-copy-block">
           <p className="eyebrow"><span className="red-dot" /> 分享现场</p>
-          <h2 id="share-title">把这张海报带走</h2>
+          <h2 id="share-title">生成你的花少人格海报</h2>
           <p>填写姓名后，海报会显示“XXX，你的花少人格是”。</p>
           <div className="share-personalize">
             <label htmlFor="share-name"><span>PERSONALIZE / 姓名</span>姓名（可选）</label>
@@ -496,7 +522,7 @@ export function ResultScreen({ result, onRetake }: { result: ComputedResult; onR
               onChange={(event) => setShareName(event.target.value)}
               aria-describedby="share-name-help"
             />
-            <p id="share-name-help">名字只会出现在你保存的图上。</p>
+            <p id="share-name-help">姓名仅用于本地海报和配文。</p>
           </div>
           <button
             ref={posterMainRef}
@@ -505,7 +531,11 @@ export function ResultScreen({ result, onRetake }: { result: ComputedResult; onR
             disabled={posterExporting}
             onClick={() => void handlePosterAction(false)}
           >
-            <span>{prefersShareOverDownload ? "分享/保存成图片" : "下载我的海报"}</span>
+            <span>
+              {prefersShareOverDownload
+                ? cleanShareName ? `分享${cleanShareName}的海报` : "分享/保存成图片"
+                : cleanShareName ? `下载${cleanShareName}的海报` : "下载我的海报"}
+            </span>
             <span>{prefersShareOverDownload ? "↗" : "↘"}</span>
           </button>
         </div>

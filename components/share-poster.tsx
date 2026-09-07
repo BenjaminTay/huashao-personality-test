@@ -293,6 +293,7 @@ export function buildSharePosterSpec(
   const palette = SYMBOL_PALETTES[archetype.visualSymbol];
   const cleanName = normalizeShareName(displayName);
   const personalizedLabel = cleanName ? `${cleanName}，你的花少人格是` : "你的花少人格是";
+  const personalizedLabelSize = cleanName.length > 6 ? 36 : cleanName.length > 3 ? 40 : 45;
   const matrix = createQrMatrix(testUrl);
   const qrTotal = 156;
   const qrModule = qrTotal / (matrix.size + 8);
@@ -335,11 +336,11 @@ export function buildSharePosterSpec(
   text({ x: 72, y: 92, size: 18, weight: 400, fill: INK, family: "mono", letterSpacing: 3, text: "花少人格 / HUAXUE TEST" });
   text({ x: 1008, y: 92, size: 16, weight: 400, fill: MUTED, family: "mono", letterSpacing: 2, text: "FIELD FILE 02", anchor: "end" });
   text({ x: 72, y: 230, size: 17, weight: 400, fill: palette.accent, family: "mono", letterSpacing: 4, text: `PERSONALITY ARCHIVE / ${archetype.englishName}` });
-  text({ x: 72, y: 332, size: 45, weight: 700, fill: INK, family: "serif", letterSpacing: 5, text: personalizedLabel });
+  text({ x: 72, y: 332, size: personalizedLabelSize, weight: 700, fill: INK, family: "serif", letterSpacing: 5, text: personalizedLabel });
   text({ x: 72, y: 458, size: 102, weight: 700, fill: INK, family: "serif", letterSpacing: -5, text: archetype.personName });
   text({ x: 72, y: 522, size: 38, weight: 700, fill: palette.secondary, family: "serif", letterSpacing: 0, text: archetype.title });
 
-  shape(symbolSvg(archetype.visualSymbol, palette.accent, palette.secondary, 870, 250, 1.32));
+  shape(symbolSvg(archetype.visualSymbol, palette.accent, palette.secondary, 842, 244, 1.45));
   shape(`<rect x="72" y="566" width="936" height="252" fill="${palette.wash}" stroke="${palette.accent}" stroke-opacity=".26"/>`);
   text({ x: 102, y: 606, size: 15, weight: 400, fill: palette.accent, family: "mono", letterSpacing: 3, text: "名场面 / ORIGINAL LINE" });
   quoteLines.forEach((line, index) => {
@@ -403,9 +404,11 @@ export function buildSharePosterSvg(
 export function buildShareCopy(
   content: PersonalityResultContent,
   testUrl: string,
+  displayName = "",
 ): string {
   const body = content.shareCopy.trim();
   if (!body) return "";
-  return `${body}\n\n你也来测测你是哪种花学人格：${testUrl}`;
+  const cleanName = normalizeShareName(displayName);
+  const nameHeading = cleanName ? `${cleanName}的花学人格档案：\n` : "";
+  return `${nameHeading}${body}\n\n你也来测测你是哪种花学人格：${testUrl}`;
 }
-

@@ -25,6 +25,18 @@ describe("share poster", () => {
     expect(poster).not.toContain("\n&lt;测试&gt;");
   });
 
+  it("reduces the personalized headline size for the ten-character limit", () => {
+    const poster = buildSharePosterSvg(
+      ARCHETYPES.xu,
+      RESULT_CONTENT.xu,
+      SAMPLE_PROFILE,
+      TEST_URL,
+      "一二三四五六七八九十",
+    );
+
+    expect(poster).toMatch(/<text x="72" y="332"[^>]*font-size="36"[^>]*>一二三四五六七八九十，你的花少人格是<\/text>/);
+  });
+
   it("generates a complete 3:4 poster for every archetype symbol", () => {
     (Object.keys(ARCHETYPES) as ArchetypeId[]).forEach((id) => {
       const poster = buildSharePosterSvg(
@@ -58,5 +70,13 @@ describe("share poster", () => {
       expect(copy).not.toContain("undefined");
       expect(copy).not.toContain("null");
     });
+  });
+
+  it("keeps an optional local name in the copied share text", () => {
+    const copy = buildShareCopy(RESULT_CONTENT.xu, TEST_URL, "  小明  ");
+
+    expect(copy).toMatch(/^小明的花学人格档案：/);
+    expect(copy).toContain("许晴型");
+    expect(copy).toContain(TEST_URL);
   });
 });
