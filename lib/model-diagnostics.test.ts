@@ -61,6 +61,16 @@ describe("model diagnostics（数据完整性回归）", () => {
       expect(again.random.primary[archetypeId]).toBe(report.random.primary[archetypeId]);
     }
   });
+
+  it("当前发布基线无硬失败，R=10 以 G5 显式例外告警", () => {
+    const gaps = listGaps(report);
+    expect(gaps.failed).toHaveLength(0);
+    expect(gaps.soft).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: "G5-EXCEPTION", current: "R=10" }),
+      ]),
+    );
+  });
 });
 
 describe.skipIf(!DIAGNOSE)("model diagnostics（体检报告，npm run diagnose）", () => {

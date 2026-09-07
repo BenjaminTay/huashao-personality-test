@@ -79,27 +79,50 @@ if (!TOKEN) {
   );
 }
 
+// GoatCounter API 偶发返回 404/5xx 或网络抖动，重试几次再放弃。
+const RETRY_ATTEMPTS = 3;
+const RETRY_BASE_DELAY_MS = 600;
+
 async function fetchJson(pathname, params) {
   const url = new URL(`${SITE}/api/v0${pathname}`);
   for (const [key, value] of Object.entries(params)) {
     if (value) url.searchParams.set(key, value);
   }
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${TOKEN}`,
-      "Content-Type": "application/json",
-    },
-  });
-  if (!response.ok) {
-    let detail = "";
+  for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
+    let response;
     try {
-      detail = JSON.stringify(await response.json());
-    } catch {
-      detail = await response.text();
+      response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${TOKEN}`,
+          "Content-Type": "application/json",
+        },
+      });
+    } catch (error) {
+      if (attempt === RETRY_ATTEMPTS) {
+        fail(`API ${pathname} 请求失败（第 ${attempt}/${RETRY_ATTEMPTS} 次）：${error.message}`);
+      }
+      console.error(
+        `gc-stats: 网络请求失败（第 ${attempt}/${RETRY_ATTEMPTS} 次）：${error.message}`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, RETRY_BASE_DELAY_MS * attempt));
+      continue;
     }
-    fail(`API ${pathname} 请求失败（${response.status}）：${detail}`);
+    if (response.ok) return response.json();
+    if (attempt === RETRY_ATTEMPTS) {
+      let detail = "";
+      try {
+        detail = JSON.stringify(await response.json());
+      } catch {
+        detail = await response.text();
+      }
+      fail(`API ${pathname} 请求失败（${response.status}）：${detail}`);
+    }
+    console.error(
+      `gc-stats: API 返回 ${response.status}（第 ${attempt}/${RETRY_ATTEMPTS} 次），稍后重试`,
+    );
+    await new Promise((resolve) => setTimeout(resolve, RETRY_BASE_DELAY_MS * attempt));
   }
-  return response.json();
+  fail(`API ${pathname} 重试后仍未成功`);
 }
 
 const pct = (part, total) =>
@@ -138,7 +161,9 @@ const completeTotal = Object.values(completeCounts).reduce(
 );
 const shareDownload = byPath("share-download");
 const shareImage = byPath("share-image");
-const shareTotal = shareDownload + shareImage;
+const shareForward = byPath("share-forward");
+const shareCopy = byPath("share-copy");
+const shareTotal = shareDownload + shareImage + shareForward + shareCopy;
 
 const now = new Date();
 const fmtDate = (d) =>
@@ -187,10 +212,15 @@ console.log(
   )}`,
 );
 console.log(
-  `  ${pad("share-* 下载/分享海报", 22)}${pad(fmtNumber(shareTotal), 8)}${pct(
+  `  ${pad("share-* 分享动作", 22)}${pad(fmtNumber(shareTotal), 8)}${pct(
     shareTotal,
     completeTotal,
   )}（完成者中）`,
+);
+console.log(
+  `    下载 ${fmtNumber(shareDownload)} · 发图 ${fmtNumber(shareImage)} · 转发 ${fmtNumber(
+    shareForward,
+  )} · 复制配文 ${fmtNumber(shareCopy)}`,
 );
 console.log("");
 

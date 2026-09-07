@@ -58,6 +58,9 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Model diagnostics gate
+        run: npm run diagnose:strict
+
       - name: Build static site
         run: npm run build
 

@@ -1,0 +1,81 @@
+{
+  "schemaVersion": "1",
+  "generatedAt": "2026-09-07T10:40:00+08:00",
+  "timezone": "Asia/Shanghai",
+  "window": {
+    "since": "2026-09-01",
+    "through": "2026-09-07-partial"
+  },
+  "grain": "anonymous event occurrences",
+  "funnel": {
+    "start": 382,
+    "complete": 332,
+    "shareActions": {
+      "download": 18,
+      "image": 101,
+      "forward": 10,
+      "copy": 4
+    }
+  },
+  "completions": {
+    "mao": 61,
+    "xu": 11,
+    "ning": 31,
+    "zheng": 18,
+    "chen": 43,
+    "jing": 52,
+    "yang": 116
+  },
+  "cumulativeByEndDate": [
+    {
+      "end": "2026-09-04",
+      "start": 16,
+      "complete": 12,
+      "completions": { "mao": 1, "xu": 1, "ning": 0, "zheng": 0, "chen": 1, "jing": 3, "yang": 6 }
+    },
+    {
+      "end": "2026-09-05",
+      "start": 226,
+      "complete": 192,
+      "completions": { "mao": 30, "xu": 7, "ning": 18, "zheng": 10, "chen": 24, "jing": 34, "yang": 69 }
+    },
+    {
+      "end": "2026-09-06",
+      "start": 321,
+      "complete": 274,
+      "completions": { "mao": 49, "xu": 8, "ning": 24, "zheng": 15, "chen": 33, "jing": 43, "yang": 102 }
+    },
+    {
+      "end": "2026-09-07",
+      "start": 371,
+      "complete": 322,
+      "completions": { "mao": 59, "xu": 10, "ning": 31, "zheng": 17, "chen": 41, "jing": 49, "yang": 115 }
+    },
+    {
+      "end": "2026-09-08",
+      "start": 382,
+      "complete": 332,
+      "completions": { "mao": 61, "xu": 11, "ning": 31, "zheng": 18, "chen": 43, "jing": 52, "yang": 116 }
+    }
+  ],
+  "randomBaseline": {
+    "sampleCount": 500000,
+    "seed": 20260903,
+    "primaryShares": {
+      "mao": 0.0938,
+      "xu": 0.1495,
+      "ning": 0.1219,
+      "zheng": 0.1983,
+      "chen": 0.1049,
+      "jing": 0.1097,
+      "yang": 0.2219
+    }
+  },
+  "notes": [
+    "GoatCounter events use no_session; counts are occurrences, not unique people.",
+    "The 2026-09-07 interval is partial at snapshot time.",
+    "cumulativeByEndDate uses an exclusive end-date upper bound; end=2026-09-08 represents data through 2026-09-07, not collection on 2026-09-08.",
+    "The first 12 completions may mix builds before the v3.1 matrix and v2.1 coordinates were fully deployed.",
+    "Production analytics stores final archetype only, so this snapshot cannot attribute drift to individual questions or options."
+  ]
+}

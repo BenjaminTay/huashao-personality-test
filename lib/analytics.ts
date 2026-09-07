@@ -1,4 +1,3 @@
-import { ARCHETYPES } from "../data/archetypes";
 import type { ArchetypeId } from "../data/types";
 
 const GOATCOUNTER_SITE = process.env.NEXT_PUBLIC_GOATCOUNTER_SITE;
@@ -6,7 +5,6 @@ const GOATCOUNTER_SITE = process.env.NEXT_PUBLIC_GOATCOUNTER_SITE;
 interface GoatCounterVars {
   event?: boolean;
   path?: string;
-  title?: string;
   no_session?: 1;
 }
 
@@ -15,8 +13,6 @@ declare global {
     goatcounter?: { count?: (vars: GoatCounterVars) => void };
   }
 }
-
-let testStartedAt: number | null = null;
 
 const pendingEvents: GoatCounterVars[] = [];
 let flushTimer: ReturnType<typeof setInterval> | null = null;
@@ -46,25 +42,12 @@ function send(vars: GoatCounterVars): void {
   }
 }
 
-function formatDuration(totalSeconds: number): string {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return minutes > 0 ? `${minutes} 分 ${seconds} 秒` : `${seconds} 秒`;
-}
-
 export function trackTestStart(): void {
-  testStartedAt = Date.now();
   send({ event: true, path: "start-test", no_session: 1 });
 }
 
 export function trackTestComplete(primaryType: ArchetypeId): void {
-  const title =
-    testStartedAt !== null
-      ? `${ARCHETYPES[primaryType].personName} · 用时 ${formatDuration(
-          Math.max(0, Math.round((Date.now() - testStartedAt) / 1000)),
-        )}`
-      : ARCHETYPES[primaryType].personName;
-  send({ event: true, path: `complete-${primaryType}`, title, no_session: 1 });
+  send({ event: true, path: `complete-${primaryType}`, no_session: 1 });
 }
 
 export function trackShareCard(): void {

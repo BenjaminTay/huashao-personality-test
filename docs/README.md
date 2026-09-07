@@ -12,6 +12,7 @@
 | 为什么使用当前计分方式 | [decisions/评分模型演进与选择.md](decisions/评分模型演进与选择.md) |
 | 结果页、隐私和分享边界 | [decisions/结果系统产品体验与隐私决策.md](decisions/结果系统产品体验与隐私决策.md) |
 | 人格分布优化的基线与路线图 | [decisions/人格分布优化-诊断基线原则与路线图.md](decisions/人格分布优化-诊断基线原则与路线图.md) |
+| 首批真实分布结论与模型收口 | [analysis/真实分布首报-2026-09-07.md](analysis/真实分布首报-2026-09-07.md) |
 | Question Set v3.1 评分矩阵合入记录 | [decisions/QuestionSet-v3.1-评分矩阵提案.md](decisions/QuestionSet-v3.1-评分矩阵提案.md) |
 | Archetype Coordinates v2.1 坐标合入记录 | [decisions/ArchetypeCoordinates-v2.1-提案.md](decisions/ArchetypeCoordinates-v2.1-提案.md) |
 | Result System v2 梗感改版与 Question Set v3.2 勘误 | [decisions/ResultSystem-v2-梗感改版与QuestionSet-v3.2勘误.md](decisions/ResultSystem-v2-梗感改版与QuestionSet-v3.2勘误.md) |
@@ -32,6 +33,7 @@ scripts/sync-population.mjs  快照同步脚本（GoatCounter 事件 → data/�
 docs/design/                 视觉和交互规范
 docs/research/               事实材料、解释假设和待核验问题
 docs/decisions/              已做出的产品与技术选择
+docs/analysis/               真实分布快照、可复跑分析与结论报告
 docs/archive/                历史路线，不得被运行时代码引用
 ~~~
 

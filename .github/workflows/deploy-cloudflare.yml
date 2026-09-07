@@ -56,6 +56,10 @@ jobs:
         if: github.event_name != 'schedule'
         run: npm test
 
+      - name: Model diagnostics gate
+        if: github.event_name != 'schedule'
+        run: npm run diagnose:strict
+
       - name: Build static site
         run: npm run build
 

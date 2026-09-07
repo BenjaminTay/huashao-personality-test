@@ -8,7 +8,7 @@ import {
   validateQuestionSet,
 } from "./scoring";
 
-export const DIAGNOSTIC_REPORT_VERSION = "1.0";
+export const DIAGNOSTIC_REPORT_VERSION = "1.1";
 export const MC_SEED = 20260903;
 export const MC_SAMPLE_COUNT = 500_000;
 
@@ -54,6 +54,15 @@ export const TARGETS = {
   /** 参考指标，不硬性拦截。 */
   maxBestWorstRatio: 2.0,
 } as const;
+
+/**
+ * 已批准的发布门禁例外。R=10 是 v3.1/v2.1 已知基线，仅比理想上限多 1 题；
+ * 2026-09-07 真实分布首报确认，仅靠结果聚合事件无法将人群偏差归因到该覆盖。
+ * 因此当前版本将它保留为显式告警，但不阻断发布；其他超界仍是失败。
+ */
+export const ACCEPTED_DIMENSION_COVERAGE_MAX: Partial<
+  Record<DimensionId, number>
+> = { R: 10 };
 
 /** 每型的出场题数/唯一槽位下限（G3/G4）。全部 ≥12。
  *  注：v3.1 曾为 chen 设 ≥10 例外（其主场文本稀缺）；Archetype Coordinates v2.1
@@ -330,6 +339,21 @@ export function listGaps(report: ModelDiagnosticsReport): {
   for (const dimension of DIMENSION_ORDER) {
     const count = report.dimensionCoverage[dimension];
     if (count < TARGETS.dimensionCoverageMin || count > TARGETS.dimensionCoverageMax) {
+      const acceptedMax = ACCEPTED_DIMENSION_COVERAGE_MAX[dimension];
+      if (
+        count >= TARGETS.dimensionCoverageMin &&
+        acceptedMax !== undefined &&
+        count <= acceptedMax
+      ) {
+        push(
+          soft,
+          "G5-EXCEPTION",
+          `${dimension}=${count}`,
+          `理想 ${TARGETS.dimensionCoverageMin}–${TARGETS.dimensionCoverageMax} 题；当前发布例外 ≤ ${acceptedMax} 题`,
+          `维度 ${dimension} 覆盖使用已记录的发布例外`,
+        );
+        continue;
+      }
       push(
         failed,
         "G5",
@@ -400,9 +424,12 @@ export function formatReport(report: ModelDiagnosticsReport): string {
   lines.push("--------------------------------------");
   lines.push("六维维度覆盖（当前 vs 基线 v2.1）：");
   for (const dimension of DIMENSION_ORDER) {
+    const acceptedMax = ACCEPTED_DIMENSION_COVERAGE_MAX[dimension];
+    const releaseHint =
+      acceptedMax === undefined ? "" : `（当前发布例外 ≤ ${acceptedMax}）`;
     lines.push(
       `  ${pad(dimension, 2)} ${pad(String(report.dimensionCoverage[dimension]), 3)} 题  基线 ${baseline.dimensionCoverage[dimension]} 题  ` +
-        `目标 ${TARGETS.dimensionCoverageMin}–${TARGETS.dimensionCoverageMax} 题`,
+        `目标 ${TARGETS.dimensionCoverageMin}–${TARGETS.dimensionCoverageMax} 题${releaseHint}`,
     );
   }
   lines.push(`孪生最近型题目：${report.twinQuestionIds.length}/24（目标 ≤ ${TARGETS.maxTwinQuestions}/24）`);
