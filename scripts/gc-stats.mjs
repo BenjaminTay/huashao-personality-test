@@ -134,7 +134,7 @@ function pad(text, width) {
   return visible + " ".repeat(Math.max(0, width - count));
 }
 
-const [hitsData, totalData] = await Promise.all([
+const [hitsData, totalData, dailyCompleteData] = await Promise.all([
   fetchJson("/stats/hits", {
     path_by_name: "true",
     limit: "200",
@@ -142,7 +142,25 @@ const [hitsData, totalData] = await Promise.all([
     end: END,
   }),
   fetchJson("/stats/total", { start: SINCE, end: END }),
+  fetchJson("/stats/hits", {
+    daily: "true",
+    path_by_name: "true",
+    include_paths: ARCHETYPE_IDS.map((id) => `complete-${id}`).join(","),
+    limit: "100",
+    start: SINCE,
+    end: END,
+  }),
 ]);
+
+// 按日累计 complete-* 事件（GoatCounter daily=true 时逐 path 的计数在 hit.stats）。
+const completeByDay = new Map();
+for (const hit of dailyCompleteData.hits ?? []) {
+  if (!hit.event) continue;
+  for (const stat of hit.stats ?? []) {
+    if (!stat?.day) continue;
+    completeByDay.set(stat.day, (completeByDay.get(stat.day) ?? 0) + (stat.daily ?? 0));
+  }
+}
 
 const pathHits = hitsData.hits ?? [];
 const pageHits = pathHits.filter((hit) => !hit.event);
@@ -245,11 +263,20 @@ console.log("");
 const daily = (totalData.stats ?? [])
   .filter((stat) => stat?.day)
   .map((stat) => ({ day: stat.day, count: stat.daily ?? 0 }));
-if (daily.length > 0) {
-  console.log("五、每日访问者趋势（全部路径含事件）");
-  for (const { day, count } of daily) {
-    console.log(`  ${day}    ${fmtNumber(count)}`);
+if (daily.length > 0 || completeByDay.size > 0) {
+  console.log("五、每日完成人次与访问者趋势");
+  console.log(`  ${pad("日期", 12)}${pad("完成人次", 10)}访问者`);
+  const days = new Set([
+    ...daily.map((d) => d.day),
+    ...completeByDay.keys(),
+  ]);
+  for (const day of [...days].sort()) {
+    const visitors = daily.find((d) => d.day === day)?.count ?? 0;
+    console.log(
+      `  ${pad(day, 12)}${pad(fmtNumber(completeByDay.get(day) ?? 0), 10)}${fmtNumber(visitors)}`,
+    );
   }
+  console.log("  完成人次为 complete-* 事件数（当天窗口），访问者为当天所有页面+事件访问量。");
   console.log("");
 }
 

@@ -9,7 +9,7 @@ export interface PopulationSnapshot {
 }
 
 export const POPULATION_SNAPSHOT: PopulationSnapshot = {
-  generatedAt: "2026-09-04T12:11:56.845Z",
-  since: "",
-  completions: { mao: 19, xu: 7, ning: 11, zheng: 10, chen: 13, jing: 21, yang: 41 },
+  generatedAt: "2026-09-07T15:06:58.922Z",
+  since: "2026-09-01",
+  completions: { mao: 78, xu: 12, ning: 39, zheng: 23, chen: 56, jing: 61, yang: 137 },
 };
